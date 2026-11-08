@@ -1,5 +1,6 @@
 // Authors: Christian Reitwiessner
 // This module is also used by the Node protocol tests. It has no browser I/O.
+import {unpackGame} from './game-file.js';
 const FUNCTIONS = ['game_abi_version', 'input_resize', 'game_load', 'game_start',
   'game_input', 'game_frame_width', 'game_frame_height', 'game_frame_ptr',
   'game_status_ptr', 'game_status_len', 'error_ptr', 'error_len'];
@@ -9,7 +10,7 @@ const MAX_TEXT = 64 * 1024;
 export class GameRuntime {
   async load(binary, data) {
     this.api = null;
-    const module = await WebAssembly.compile(binary);
+    const module = await WebAssembly.compile(await unpackGame(binary));
     if (WebAssembly.Module.imports(module).length) {
       throw new Error('This game needs external imports. Choose a self-contained Local Game ABI v1 build.');
     }

@@ -4,5 +4,5 @@
   "private": true,
   "type": "module",
   "author": "Christian Reitwiessner",
-  "scripts": {"test": "node --test tests/runtime.test.mjs", "build": "node tools/build.mjs"}
+  "scripts": {"test": "node --test tests/*.test.mjs", "build": "node tools/build.mjs"}
 }

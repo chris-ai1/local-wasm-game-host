@@ -88,10 +88,6 @@ $('#start').addEventListener('click', async () => {
     if (dataFile && dataFile.size > MAX_DATA) throw new Error('Game data exceeds 128 MiB.');
     const [gameBytes, dataBytes] = await Promise.all([gameFile.arrayBuffer(), dataFile ? dataFile.arrayBuffer() : null]);
     if (activeEpoch !== epoch) return;
-    const magic = new Uint8Array(gameBytes, 0, Math.min(4, gameBytes.byteLength));
-    if (magic.length !== 4 || magic[0] !== 0 || magic[1] !== 97 || magic[2] !== 115 || magic[3] !== 109) {
-      throw new Error('Choose a compiled .wasm game. Native desktop and original Amiga executables cannot run in this host.');
-    }
     worker = new Worker(new URL('./worker.js', import.meta.url), {type: 'module'});
     worker.onmessage = ({data: reply}) => {
       const entry = pending.get(reply.id); if (!entry) return;

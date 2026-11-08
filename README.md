@@ -2,7 +2,7 @@
 
 Authors: Christian Reitwiessner
 
-A generic static GitHub Pages host for a **locally selected `.wasm` game and
+A generic static GitHub Pages host for a **locally selected `.wasm` game (or ZIP containing it) and
 optional data file**. It contains no game binaries, original archives or assets.
 Files stay in browser memory for the session. There are no uploads, analytics,
 remote scripts, runtime dependencies or storage APIs.
@@ -13,12 +13,12 @@ No game-specific names, hashes, archive parsing or simulation code are used by
 the host runtime. It works under GitHub Pages subpaths.
 
 1. Open the hosted page.
-2. Choose your compiled `.wasm` game.
+2. Choose your compiled `.wasm` game or its downloaded build ZIP. No extraction needed.
 3. Choose its data file if needed, then Start.
 4. Click the display to use the keyboard, or use the touch controls.
 
 For the private Der Patrizier reimplementation, run `make web` in that checkout,
-select `web/patrizier.wasm` and your original `patrizier.zip`. Its data parser,
+select `web/patrizier.wasm` (or the `patrizier-web-….zip` release build) and your original `patrizier.zip`. Its data parser,
 German interface and current gameplay limitations come from the selected module.
 The main game repository and binaries are not published with this site.
 

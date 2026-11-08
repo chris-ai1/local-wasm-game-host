@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {fixture} from '../tests/fixture.mjs';
+import {zipFixture} from '../tests/zip-fixture.mjs';
 const {chromium} = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const browser = await chromium.launch({headless:true,
   ...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}:{}),
@@ -31,6 +32,8 @@ try{
   await choose(fixture({version:2}));await start();await statusMatches(/Unsupported game interface/);
   await choose(fixture({pointer:-1}));await start();await statusMatches(/invalid memory range/);
   await choose(fixture());await start();await statusMatches(/^Ready$/);
+  await page.locator('#binary').setInputFiles({name:'game-build.zip',mimeType:'application/zip',buffer:zipFixture([{name:'game.wasm',bytes:fixture()},{name:'README.txt',bytes:[1,2,3]}])});
+  await start();await statusMatches(/^Ready$/);
   await page.locator('#data').setInputFiles({name:'opaque.data',mimeType:'application/octet-stream',buffer:Buffer.from([1,2,3])});
   await page.locator('#clear-data').click();assert.equal(await page.locator('#data').evaluate(input=>input.files.length),0);
   await start();await statusMatches(/^Ready$/);
@@ -53,7 +56,7 @@ try{
   await page.locator('#stop').click();await statusMatches(/^Stopped/);
 
   if(process.env.GAME_WASM){
-    await page.locator('#binary').setInputFiles(process.env.GAME_WASM);
+    await page.locator('#binary').setInputFiles(process.env.GAME_WASM_ZIP||process.env.GAME_WASM);
     if(process.env.GAME_DATA)await page.locator('#data').setInputFiles(process.env.GAME_DATA);
     await start();await statusMatches(/^Hauptmenü/);
     if(process.env.GAME_REPLAY){

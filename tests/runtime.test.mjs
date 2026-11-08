@@ -28,7 +28,7 @@ test('rejects incompatible modules, imports, versions, and game errors',async()=
   for(const [options,pattern] of [[{missing:'game_input'},/missing game_input/],[{imports:true},/external imports/],[{version:2},/interface version/],[{badStart:true},/test failure/]]){
     await assert.rejects(new GameRuntime().load(fixture(options),null),pattern);
   }
-  await assert.rejects(new GameRuntime().load(new Uint8Array([1,2,3]),null),WebAssembly.CompileError);
+  await assert.rejects(new GameRuntime().load(new Uint8Array([1,2,3]),null),/compiled .wasm game or a ZIP/);
 });
 
 test('rejects invalid framebuffer dimensions and memory ranges',async()=>{

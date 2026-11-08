@@ -7,7 +7,8 @@ language. A native ELF, PE, Mach-O or Amiga HUNK executable needs a port or an
 emulator; selecting one does not convert it to WebAssembly. Emscripten/WASI
 modules requiring runtime imports are not supported by this interface.
 
-The host selects a game binary and optionally one opaque data file from the
+The host selects a game binary (or a ZIP containing exactly one `.wasm` file)
+and optionally one opaque data file from the
 local filesystem. Neither is fetched from a URL, uploaded, persisted or bundled
 with the website. Games execute in a terminable worker. Only the static host
 code is downloaded. WebAssembly modules receive no JavaScript imports, network,
@@ -35,7 +36,14 @@ failure is `0`. Traps are also reported as errors.
 | `error_ptr` | — | UTF-8 error text pointer |
 | `error_len` | — | Error byte length, 0–65536 |
 
-The data file is limited to 128 MiB, the module to 64 MiB. The game can impose
+ZIPs may use stored or deflate compression; nested folders and macOS sidecars
+are supported, while encrypted, split and ZIP64 archives are rejected. ZIP
+headers, entry lengths and CRC-32 are checked. Decompression uses the browser's
+[Compression Streams API](https://developer.mozilla.org/en-US/docs/Web/API/DecompressionStream/DecompressionStream)
+inside the game worker, with bounded output. The data file is passed through
+unchanged, including when it is itself a ZIP.
+
+The data file is limited to 128 MiB, the game file and unpacked module to 64 MiB. The game can impose
 smaller limits. With a data file selected, the host calls `input_resize`, writes
 all bytes, calls `game_load`, then `game_start`. An explicitly selected empty
 file still calls `game_load`; no selected data file skips both data functions.
