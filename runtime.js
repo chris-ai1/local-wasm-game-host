@@ -80,7 +80,11 @@ export class GameRuntime {
   inputs(events) {
     if (!this.api) throw new Error('No game is running.');
     if (!Array.isArray(events) || events.length > 32) throw new Error('Invalid input batch.');
-    for (const {kind, a, b} of events) this.check(this.api.game_input(kind, a, b), 'Game input failed.');
+    for (const {kind, a, b} of events) {
+      if (kind === 10) {
+        if (this.pointerMotion) this.check(this.api.game_pointer_move(a, b), 'Pointer motion failed.');
+      } else this.check(this.api.game_input(kind, a, b), 'Game input failed.');
+    }
     return this.snapshot();
   }
 
@@ -90,4 +94,5 @@ export class GameRuntime {
   }
 
   get animated() { return typeof this.api?.game_tick === 'function'; }
+  get pointerMotion() { return typeof this.api?.game_pointer_move === 'function'; }
 }

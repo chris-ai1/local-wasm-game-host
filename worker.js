@@ -9,7 +9,7 @@ self.onmessage = async ({data: message}) => {
     else if (message.type === 'inputs') snapshot = runtime.inputs(message.events);
     else if (message.type === 'tick') snapshot = runtime.tick(message.milliseconds);
     else throw new Error('Unknown host request.');
-    self.postMessage({id: message.id, ...snapshot, animated: runtime.animated}, [snapshot.frame.buffer]);
+    self.postMessage({id: message.id, ...snapshot, animated: runtime.animated, pointerMotion: runtime.pointerMotion}, [snapshot.frame.buffer]);
   } catch (error) {
     self.postMessage({id: message.id, error: error.message || String(error)});
   }

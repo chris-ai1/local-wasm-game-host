@@ -8,8 +8,8 @@ const vector=items=>[...leb(items.length),...items.flat()];
 const constant=value=>[0x41,...signed(value)];
 
 export function fixture(options={}) {
-  const {version=1,width=2,height=1,pointer=32,missing='',badStart=false,hang=false,grow=false,tick=false,imports=false}=options;
-  const types=[[0x60,0,1,0x7f],[0x60,1,0x7f,1,0x7f],[0x60,3,0x7f,0x7f,0x7f,1,0x7f]];
+  const {version=1,width=2,height=1,pointer=32,missing='',badStart=false,hang=false,grow=false,tick=false,motion=false,imports=false}=options;
+  const types=[[0x60,0,1,0x7f],[0x60,1,0x7f,1,0x7f],[0x60,3,0x7f,0x7f,0x7f,1,0x7f],[0x60,2,0x7f,0x7f,1,0x7f]];
   const definitions=[
     ['game_abi_version',0,constant(version)],['input_resize',1,constant(4096)],
     ['game_load',0,constant(1)],
@@ -18,7 +18,8 @@ export function fixture(options={}) {
     ['game_frame_width',0,constant(width)],['game_frame_height',0,constant(height)],['game_frame_ptr',0,constant(pointer)],
     ['game_status_ptr',0,constant(128)],['game_status_len',0,constant(5)],
     ['error_ptr',0,constant(256)],['error_len',0,constant(12)],
-    ...(tick?[['game_tick',1,constant(1)]]:[])
+    ...(tick?[['game_tick',1,constant(1)]]:[]),
+    ...(motion?[['game_pointer_move',3,[...constant(34),0x20,0,0x3a,0,0,...constant(1)]]]:[])
   ];
   const importCount=imports?1:0;
   const exports=definitions.flatMap(([name],index)=>name===missing?[]:[[...str(name),0,...leb(index+importCount)]]);

@@ -88,6 +88,14 @@ Visibility throttling follows the browser. Games without this export update
 only on input. The host currently allows 20 seconds for initial loading and
 3 seconds per event/update; timeout or Stop terminates the worker.
 
+## Optional pointer motion
+
+Export `game_pointer_move(x, y) -> success/failure` to receive movement over the
+display in pixel coordinates. This is separate from the required `game_input`
+events so older games do not receive unknown event kinds. The host sends motion
+only when this export exists, in the same bounded queue as other inputs. Games
+can combine it with `game_tick` for raster-paced scrolling or animation.
+
 ## Implementing a game
 
 Rust can export functions using `#[unsafe(no_mangle)] pub extern "C" fn ...`

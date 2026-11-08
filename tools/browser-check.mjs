@@ -92,6 +92,30 @@ try{
       }
       console.log(`${rows.length} original game replay frames match through the generic host.`);
     }
+    if(process.env.GAME_NAVIGATION_CHECK){
+      // Optional private-game integration: the recruitment replay ends at the
+      // crew prompt. Exercise motion/ticks through actual DOM input next.
+      const hashFrame=()=>page.locator('#screen').evaluate(async canvas=>{
+        const bytes=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+        return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');
+      });
+      const move=async(x,y)=>{const box=await page.locator('#screen').boundingBox();await page.mouse.move(box.x+(x+.5)*box.width/320,box.y+(y+.5)*box.height/200);};
+      const click=async(x,y,button='left')=>{const box=await page.locator('#screen').boundingBox();await page.mouse.click(box.x+(x+.5)*box.width/320,box.y+(y+.5)*box.height/200,{button});};
+      await move(160,100);await click(160,100,'right');await statusMatches(/^Karte/);
+      const centered=await hashFrame();await move(1,100);
+      await page.waitForFunction(async initial=>{
+        const canvas=document.querySelector('#screen'),bytes=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+        return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('')!==initial;
+      },centered,{timeout:3000});
+      await move(160,100);await page.waitForTimeout(80);const stopped=await hashFrame();await page.waitForTimeout(80);assert.equal(await hashFrame(),stopped);
+      await click(160,100,'right');await statusMatches(/^Kontor/);
+      await page.keyboard.press('k');await statusMatches(/^Karte/);assert.equal(await hashFrame(),centered);
+      await click(111,130);await statusMatches(/^Kontor/); // Current home town cancels.
+      await page.keyboard.press('k');await statusMatches(/^Karte/);
+      await click(253,128);await statusMatches(/^Voyage scheduled/);
+      assert.match(await page.locator('#status').textContent(),/time has not advanced/);
+      console.log('Recruitment, optional pointer motion, raster-paced map scrolling, cancellation and departure scheduling passed in the browser.');
+    }
     await page.locator('#stop').click();await start();await statusMatches(/^Hauptmenü/);
   }
   await page.setViewportSize({width:390,height:844});

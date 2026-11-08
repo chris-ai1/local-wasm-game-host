@@ -24,6 +24,13 @@ test('supports no-data games, memory growth, and optional ticks',async()=>{
   await game.load(fixture(),new ArrayBuffer(0));assert.equal(game.animated,false);
 });
 
+test('sends optional pointer motion through its own export, preserving old modules',async()=>{
+  const game=new GameRuntime();await game.load(fixture({motion:true}),null);
+  assert.equal(game.pointerMotion,true);assert.equal(game.input(10,91,0).frame[2],91);
+  await game.load(fixture(),null);assert.equal(game.pointerMotion,false);
+  assert.equal(game.input(10,91,0).frame[0],0);
+});
+
 test('rejects incompatible modules, imports, versions, and game errors',async()=>{
   for(const [options,pattern] of [[{missing:'game_input'},/missing game_input/],[{imports:true},/external imports/],[{version:2},/interface version/],[{badStart:true},/test failure/]]){
     await assert.rejects(new GameRuntime().load(fixture(options),null),pattern);

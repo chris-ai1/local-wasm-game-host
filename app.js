@@ -7,6 +7,7 @@ const MAX_BINARY = 64 * 1024 * 1024, MAX_DATA = 128 * 1024 * 1024;
 let worker, epoch = 0, requestId = 0, running = false, busy = false, animation = 0, lastTick = 0;
 let lastPointer = {x: 0, y: 0};
 let inputQueue = [], inputBusy = false;
+let pointerMotion = false;
 const pending = new Map();
 const errorMessages = [];
 
@@ -40,6 +41,7 @@ function stop(text = 'Stopped. Start creates a fresh game.') {
   epoch++;
   running = false; busy = false;
   inputQueue = []; inputBusy = false;
+  pointerMotion = false;
   cancelAnimationFrame(animation);
   worker?.terminate(); worker = undefined;
   for (const {reject, timer} of pending.values()) { clearTimeout(timer); reject(new Error('Game stopped.')); }
@@ -113,6 +115,7 @@ $('#start').addEventListener('click', async () => {
     const first = await request({type: 'load', binary: gameBytes, data: dataBytes}, transfers, 20000);
     if (activeEpoch !== epoch) return;
     running = true; busy = false; render(first); controls();
+    pointerMotion = first.pointerMotion === true;
     $('#session').textContent = gameFile.name;
     canvas.focus();
     if (first.animated) { lastTick = 0; animation = requestAnimationFrame(time => animate(time, activeEpoch)); }
@@ -168,7 +171,10 @@ function pointerPosition(event) {
   const y = Math.floor((event.clientY - rect.top - (rect.height - canvas.height * scale) / 2) / scale);
   return x >= 0 && y >= 0 && x < canvas.width && y < canvas.height ? {x, y} : null;
 }
-canvas.addEventListener('pointermove', event => { const point = pointerPosition(event); if (point) lastPointer = point; });
+canvas.addEventListener('pointermove', event => {
+  const point = pointerPosition(event);
+  if (point) { lastPointer = point; if (pointerMotion) send(10, point.x, point.y); }
+});
 canvas.addEventListener('pointerup', event => {
   if (event.button !== 0 && event.button !== 2) return;
   const point = pointerPosition(event); if (!point) return;
