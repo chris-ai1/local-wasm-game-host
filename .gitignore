@@ -1,0 +1,7 @@
+# Authors: Christian Reitwiessner
+/dist/
+/node_modules/
+/reports/
+*.wasm
+*.zip
+*.adf

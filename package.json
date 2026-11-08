@@ -1,0 +1,8 @@
+{
+  "name": "local-wasm-game-host",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "author": "Christian Reitwiessner",
+  "scripts": {"test": "node --test tests/runtime.test.mjs", "build": "node tools/build.mjs"}
+}

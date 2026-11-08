@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- Authors: Christian Reitwiessner -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Run a compatible WebAssembly game from your own files, entirely in your browser.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; worker-src 'self'; connect-src 'none'; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <title>Local Game Room</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<header><a class="wordmark" href="./">LOCAL GAME ROOM<span class="lamp" aria-hidden="true"></span></a><span class="tag">Your files. Your browser.</span></header>
+<main>
+  <section class="intro"><p class="eyebrow">A small room for your games</p><h1>Bring a game.<br>Make yourself at home.</h1><p class="lede">Open a compatible WebAssembly game and its data from your device. Everything runs here, in your browser. Your files are never uploaded.</p></section>
+  <section class="loadout" aria-label="Local game files">
+    <label class="file-card"><span class="step">01 / GAME</span><strong>Choose a game binary</strong><span>A compatible .wasm build</span><input id="binary" type="file" accept=".wasm,application/wasm"><span id="binary-name" class="filename">No game selected</span></label>
+    <div class="file-card"><label for="data"><span class="step">02 / DATA</span><strong>Choose game data</strong><span>A ZIP or another data file, if needed</span></label><input id="data" type="file"><span id="data-name" class="filename">No data selected</span><button id="clear-data" disabled>Clear data</button></div>
+  </section>
+  <div class="toolbar"><button id="start" class="primary" disabled>Start game <span aria-hidden="true">↗</span></button><button id="stop" disabled>Stop</button><button id="fullscreen" disabled>Fullscreen</button><span id="session">Nothing running</span></div>
+  <p id="status" role="status" aria-live="polite">Choose a .wasm game to begin.</p>
+  <section class="cabinet" aria-label="Game display">
+    <div id="placeholder"><span class="cross" aria-hidden="true">+</span><p>Your next game goes here.</p><small>No downloads. No account. Just play.</small></div>
+    <canvas id="screen" width="320" height="200" tabindex="0" aria-label="Game screen. Click to focus keyboard controls." hidden></canvas>
+  </section>
+  <div class="controls" aria-label="Game input controls">
+    <label>Touch keyboard <input id="keyboard" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Type game input" disabled></label>
+    <div class="keys"><button data-key="8" aria-label="Left arrow" disabled>←</button><button data-key="9" aria-label="Right arrow" disabled>→</button><button data-key="3" disabled>⌫</button><button data-key="4" disabled>Esc</button><button data-key="1" data-value="32" disabled>Space</button><button data-key="2" disabled>Return</button><button id="right-click" disabled>Right click</button></div>
+  </div>
+  <details><summary>Which games work here?</summary><p>This room runs WebAssembly games that implement the <a href="./ABI.md">Local Game ABI v1</a>: an RGBA display, text status and input events. It does not run native desktop or Amiga executables directly.</p><p>Keyboard input goes to the focused game screen. The touch keyboard and buttons also work on mobile. Right click uses the most recent pointer position. Stop clears the running game; Start creates a fresh instance.</p></details>
+</main>
+<footer><span>Made for local play.</span><a href="https://github.com/Chris-ai1/local-wasm-game-host">Source &amp; interface</a><span>Authors: Christian Reitwiessner</span></footer>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
