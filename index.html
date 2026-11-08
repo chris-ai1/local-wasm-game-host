@@ -19,6 +19,7 @@
   </section>
   <div class="toolbar"><button id="start" class="primary" disabled>Start game <span aria-hidden="true">↗</span></button><button id="stop" disabled>Stop</button><button id="fullscreen" disabled>Fullscreen</button><span id="session">Nothing running</span></div>
   <p id="status" role="status" aria-live="polite">Choose a .wasm game or game-build ZIP to begin.</p>
+  <section id="error-panel" role="alert" aria-label="Runner error" hidden><strong>The runner reported an error</strong><pre id="error-details"></pre><button id="dismiss-error">Dismiss</button><button id="reload">Reload latest runner</button></section>
   <section class="cabinet" aria-label="Game display">
     <div id="placeholder"><span class="cross" aria-hidden="true">+</span><p>Your next game goes here.</p><small>No downloads. No account. Just play.</small></div>
     <canvas id="screen" width="320" height="200" tabindex="0" aria-label="Game screen. Click to focus keyboard controls." hidden></canvas>
@@ -29,7 +30,7 @@
   </div>
   <details><summary>Which games work here?</summary><p>This room runs WebAssembly games that implement the <a href="./ABI.md">Local Game ABI v1</a>: an RGBA display, text status and input events. It does not run native desktop or Amiga executables directly.</p><p>Keyboard input goes to the focused game screen. The touch keyboard and buttons also work on mobile. Right click uses the most recent pointer position. Stop clears the running game; Start creates a fresh instance.</p></details>
 </main>
-<footer><span>Made for local play.</span><a href="https://github.com/Chris-ai1/local-wasm-game-host">Source &amp; interface</a><span>Authors: Christian Reitwiessner</span></footer>
+<footer><span>Made for local play. <span id="build">Development build</span></span><a href="https://github.com/Chris-ai1/local-wasm-game-host">Source &amp; interface</a><span>Authors: Christian Reitwiessner</span></footer>
 <script type="module" src="./app.js"></script>
 </body>
 </html>

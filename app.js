@@ -8,10 +8,23 @@ let worker, epoch = 0, requestId = 0, running = false, busy = false, animation =
 let lastPointer = {x: 0, y: 0};
 let inputQueue = [], inputBusy = false;
 const pending = new Map();
+const errorMessages = [];
+
+function clearErrors() {
+  errorMessages.length = 0;
+  $('#error-details').textContent = '';
+  $('#error-panel').hidden = true;
+}
 
 function message(text, error = false) {
   status.textContent = text;
   status.classList.toggle('error', error);
+  // Keep diagnostics independently of subsequent status and file changes.
+  if (error) {
+    if (!errorMessages.includes(text)) errorMessages.push(text);
+    $('#error-details').textContent = errorMessages.join('\n\n');
+    $('#error-panel').hidden = false;
+  }
 }
 
 function controls() {
@@ -80,6 +93,7 @@ async function animate(timestamp, activeEpoch) {
 
 $('#start').addEventListener('click', async () => {
   stop();
+  clearErrors();
   const activeEpoch = epoch, gameFile = binary.files[0], dataFile = data.files[0];
   if (!gameFile) return;
   busy = true; controls(); message('Opening local files…');
@@ -106,6 +120,12 @@ $('#start').addEventListener('click', async () => {
 });
 
 $('#stop').addEventListener('click', () => stop());
+$('#dismiss-error').addEventListener('click', clearErrors);
+$('#reload').addEventListener('click', () => {
+  const url = new URL(location.href);
+  url.searchParams.set('reload', Date.now().toString());
+  location.replace(url);
+});
 $('#clear-data').addEventListener('click', () => {
   data.value = '';
   data.dispatchEvent(new Event('change'));

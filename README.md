@@ -45,3 +45,11 @@ The frame protocol uses the standard [WebAssembly JavaScript interface](https://
 The worker accepts no module imports. It validates memory ranges and display
 sizes before copying output. Stop and request timeouts terminate execution so
 an unresponsive game does not block the page. No backend or service worker is used.
+
+Published builds use content-versioned filenames across the full script, worker
+and stylesheet graph so a fresh page cannot mix an old runner with new ZIP code.
+The footer identifies the loaded build. Existing open tabs need navigation to
+load an update; a fresh query-string URL also bypasses a cached index page.
+Errors stay in a separate panel until Dismiss or a new Start, independently of
+status messages. "Reload latest runner" navigates to a fresh page and requires
+reselecting the local files.

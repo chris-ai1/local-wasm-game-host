@@ -12,10 +12,16 @@ const browser = await chromium.launch({headless:true,
   args:['--no-sandbox','--no-zygote','--disable-dev-shm-usage',...(process.env.BROWSER_ARGS?JSON.parse(process.env.BROWSER_ARGS):[])]});
 const context = await browser.newContext({viewport:{width:1100,height:1000}});
 const root=path.resolve('dist'), requests=[], errors=[];
+const legacyAssets=[];
 await context.route('**/*',async route=>{
   const url=new URL(route.request().url());requests.push({url:url.href,method:route.request().method()});
   if(url.origin!=='http://localhost:4174'||!url.pathname.startsWith('/room/')){await route.abort();return;}
   const relative=url.pathname.slice('/room/'.length)||'index.html', file=path.resolve(root,relative);
+  // A stale pre-ZIP app.js must never be used by the new asset graph.
+  if(relative==='app.js'){
+    legacyAssets.push(relative);
+    await route.fulfill({body:"document.querySelector('#status').textContent='Choose a compiled .wasm game. Native desktop and original Amiga executables cannot run in this host.';",contentType:'application/javascript'});return;
+  }
   if(!file.startsWith(root+path.sep)){await route.abort();return;}
   try{await route.fulfill({body:await readFile(file),contentType:({'.html':'text/html','.js':'application/javascript','.css':'text/css','.md':'text/plain'})[path.extname(file)]||'application/octet-stream'});}
   catch{await route.fulfill({status:404,body:'Not found'});}
@@ -29,9 +35,21 @@ try{
   await page.goto('http://localhost:4174/room/');
   assert.equal(await page.locator('#start').isDisabled(),true);
   await choose([1,2,3]);await start();await statusMatches(/compiled .wasm/);
-  await choose(fixture({version:2}));await start();await statusMatches(/Unsupported game interface/);
+  const originalError=await page.locator('#error-details').textContent();
+  assert.match(originalError,/compiled .wasm game or a ZIP/);
+  await choose(fixture({version:2}));
+  assert.equal(await page.locator('#error-panel').isVisible(),true);
+  assert.equal(await page.locator('#error-details').textContent(),originalError);
+  await start();await statusMatches(/Unsupported game interface/);
+  await page.waitForTimeout(150);
+  assert.match(await page.locator('#error-details').textContent(),/Unsupported game interface/);
+  await page.locator('#reload').click();
+  await page.waitForURL(url=>url.searchParams.has('reload'));
+  assert.match(await page.locator('#build').textContent(),/^Build [a-f0-9]{12}$/);
+  assert.equal(await page.locator('#start').isDisabled(),true);
   await choose(fixture({pointer:-1}));await start();await statusMatches(/invalid memory range/);
   await choose(fixture());await start();await statusMatches(/^Ready$/);
+  assert.equal(await page.locator('#error-panel').isHidden(),true);
   await page.locator('#binary').setInputFiles({name:'game-build.zip',mimeType:'application/zip',buffer:zipFixture([{name:'game.wasm',bytes:fixture()},{name:'README.txt',bytes:[1,2,3]}])});
   await start();await statusMatches(/^Ready$/);
   await page.locator('#data').setInputFiles({name:'opaque.data',mimeType:'application/octet-stream',buffer:Buffer.from([1,2,3])});
@@ -83,6 +101,7 @@ try{
   assert.ok(requests.every(request=>request.method==='GET'));
   assert.ok(requests.every(request=>!request.url.endsWith('.wasm')&&!request.url.endsWith('.zip')));
   assert.deepEqual(errors,[]);
+  assert.deepEqual(legacyAssets,[]);
   console.log('Generic/no-data game, invalid files/ABI/pointers, paste limits, fullscreen, hang recovery, restart, mobile layout and local-only network checks passed.');
 }catch(error){console.error('Host status:',await page.locator('#status').textContent());throw error;}
 finally{await browser.close();}
