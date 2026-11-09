@@ -72,6 +72,14 @@ try{
   await page.locator('#stop').click();await statusMatches(/^Stopped/);
   await choose(fixture());await start();await statusMatches(/^Ready$/);
   await page.locator('#stop').click();await statusMatches(/^Stopped/);
+  await choose(fixture({physical:true}));await start();await statusMatches(/^Ready$/);
+  await page.keyboard.down('F2');
+  await page.waitForFunction(()=>document.querySelector('#screen').getContext('2d').getImageData(0,0,1,1).data[2]===1);
+  assert.deepEqual((await pixel()).slice(0,3),[12,59,1]);
+  await page.keyboard.up('F2');
+  await page.waitForFunction(()=>document.querySelector('#screen').getContext('2d').getImageData(0,0,1,1).data[2]===0);
+  assert.deepEqual((await pixel()).slice(0,3),[12,59,0]);
+  await page.locator('#stop').click();await statusMatches(/^Stopped/);
 
   if(process.env.GAME_WASM){
     await page.locator('#binary').setInputFiles(process.env.GAME_WASM_ZIP||process.env.GAME_WASM);
@@ -120,7 +128,7 @@ try{
   }
   await page.setViewportSize({width:390,height:844});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-  await page.locator('#stop').click();
+  if(await page.locator('#stop').isEnabled())await page.locator('#stop').click();
   assert.equal(await page.locator('#screen').isHidden(),true);
   assert.ok(requests.every(request=>request.method==='GET'));
   assert.ok(requests.every(request=>!request.url.endsWith('.wasm')&&!request.url.endsWith('.zip')));

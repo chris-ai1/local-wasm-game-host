@@ -75,8 +75,9 @@ Keyboard autorepeat is delivered normally. The host bounds queued input to 256
 events and processes batches of up to 32 before copying the next frame. A single
 paste over 256 characters is rejected without sending any of it. Unsupported inputs should be ignored
 with success, unless a game intentionally needs to report an error. This small
-interface currently supports text and pointer-driven games; it has no key-up,
-gamepad, audio or save-file channel.
+interface supports text and pointer-driven games. The optional physical keyboard
+extension below supplies key-up events; gamepad, audio and save-file channels
+remain outside the current protocol.
 
 ## Optional animation
 
@@ -95,6 +96,17 @@ display in pixel coordinates. This is separate from the required `game_input`
 events so older games do not receive unknown event kinds. The host sends motion
 only when this export exists, in the same bounded queue as other inputs. Games
 can combine it with `game_tick` for raster-paced scrolling or animation.
+
+## Optional physical keyboard
+
+Export `game_keyboard_mode() -> u32`, returning 1 when physical keyboard events
+are wanted. Every snapshot refreshes this mode. While enabled, mapped keys use
+`game_input(12, usage, pressed)`, with a USB HID keyboard-page usage ID and
+`pressed` equal to 1 for key-down or 0 for key-up. Other input kinds remain
+available for mobile text, buttons and pointer input. The host suppresses
+autorepeat in physical mode and pairs releases only with captured presses.
+Losing focus releases captured keys. A game should ignore physical keys it
+does not implement. Games without the export retain the original behavior.
 
 ## Implementing a game
 

@@ -22,6 +22,12 @@ select `web/patrizier.wasm` (or the `patrizier-web-….zip` release build) and y
 German interface and current gameplay limitations come from the selected module.
 The main game repository and binaries are not published with this site.
 
+Games can opt into physical keyboard input through `game_keyboard_mode`.
+The host then forwards USB HID usage IDs with separate press/release events,
+including function keys, while suppressing browser key repeat. Other games
+retain the existing text/control interface. See the optional extension in
+[the ABI documentation](ABI.md).
+
 ## Development
 
 Node 20 or newer; no package installation required:

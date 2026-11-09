@@ -70,7 +70,8 @@ export class GameRuntime {
     // Copy before transferring to the page; never detach WebAssembly memory.
     const frame = this.range(api.game_frame_ptr(), width * height * 4).slice();
     const status = this.text(api.game_status_ptr(), api.game_status_len());
-    return {width, height, frame, status};
+    const physicalKeyboard = typeof api.game_keyboard_mode === 'function' && api.game_keyboard_mode() === 1;
+    return {width, height, frame, status, physicalKeyboard};
   }
 
   input(kind, a, b) {

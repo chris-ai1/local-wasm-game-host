@@ -1,4 +1,5 @@
 // Authors: Christian Reitwiessner
+import {physicalKeyboard} from './physical-key.js';
 const $ = selector => document.querySelector(selector);
 const binary = $('#binary'), data = $('#data'), canvas = $('#screen');
 const context = canvas.getContext('2d', {alpha: false});
@@ -8,6 +9,8 @@ let worker, epoch = 0, requestId = 0, running = false, busy = false, animation =
 let lastPointer = {x: 0, y: 0};
 let inputQueue = [], inputBusy = false;
 let pointerMotion = false;
+let physicalKeys = false;
+const resetPhysicalKeys=physicalKeyboard(canvas,{enabled:()=>running&&physicalKeys,send:(usage,pressed)=>send(12,usage,Number(pressed))});
 const pending = new Map();
 const errorMessages = [];
 
@@ -42,6 +45,8 @@ function stop(text = 'Stopped. Start creates a fresh game.') {
   running = false; busy = false;
   inputQueue = []; inputBusy = false;
   pointerMotion = false;
+  physicalKeys = false;
+  resetPhysicalKeys();
   cancelAnimationFrame(animation);
   worker?.terminate(); worker = undefined;
   for (const {reject, timer} of pending.values()) { clearTimeout(timer); reject(new Error('Game stopped.')); }
@@ -73,6 +78,7 @@ function request(payload, transfer = [], timeout = 3000) {
 }
 
 function render(snapshot) {
+  physicalKeys = snapshot.physicalKeyboard === true;
   if (canvas.width !== snapshot.width || canvas.height !== snapshot.height) {
     canvas.width = snapshot.width; canvas.height = snapshot.height;
   }

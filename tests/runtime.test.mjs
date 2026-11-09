@@ -31,6 +31,14 @@ test('sends optional pointer motion through its own export, preserving old modul
   assert.equal(game.input(10,91,0).frame[0],0);
 });
 
+test('physical key mode is optional and carries USB usage plus press/release',async()=>{
+  const game=new GameRuntime();let frame=await game.load(fixture({physical:true}),null);
+  assert.equal(frame.physicalKeyboard,true);
+  assert.deepEqual([...game.input(12,59,1).frame].slice(0,3),[12,59,1]);
+  assert.deepEqual([...game.input(12,59,0).frame].slice(0,3),[12,59,0]);
+  frame=await game.load(fixture(),null);assert.equal(frame.physicalKeyboard,false);
+});
+
 test('rejects incompatible modules, imports, versions, and game errors',async()=>{
   for(const [options,pattern] of [[{missing:'game_input'},/missing game_input/],[{imports:true},/external imports/],[{version:2},/interface version/],[{badStart:true},/test failure/]]){
     await assert.rejects(new GameRuntime().load(fixture(options),null),pattern);
