@@ -1,6 +1,7 @@
 // Authors: Christian Reitwiessner
 import {physicalKeyboard} from './physical-key.js';
 import {AudioOutput} from './audio-output.js';
+import {filePanel} from './file-panel.js';
 const $ = selector => document.querySelector(selector);
 const binary = $('#binary'), data = $('#data'), canvas = $('#screen');
 const context = canvas.getContext('2d', {alpha: false});
@@ -13,6 +14,13 @@ let pointerMotion = false;
 let physicalKeys = false;
 let audio;
 const resetPhysicalKeys=physicalKeyboard(canvas,{enabled:()=>running&&physicalKeys,send:(usage,pressed)=>send(12,usage,Number(pressed))});
+const savedFiles=filePanel($('#local-files'),{
+  list:async()=>(await request({type:'files-list'})).paths,
+  importFile:async(path,bytes)=>request({type:'files-import',path,bytes},[bytes],20000),
+  exportFile:async path=>(await request({type:'files-export',path})).bytes,
+  focus:()=>canvas.focus(),
+});
+let fileRevision=0;
 const pending = new Map();
 const errorMessages = [];
 
@@ -44,7 +52,7 @@ function controls() {
 }
 
 function stop(text = 'Stopped. Start creates a fresh game.') {
-  epoch++;
+  epoch++;savedFiles.stop();fileRevision=0;
   running = false; busy = false;
   inputQueue = []; inputBusy = false;
   pointerMotion = false;
@@ -90,6 +98,8 @@ function render(snapshot) {
   context.putImageData(new ImageData(new Uint8ClampedArray(snapshot.frame.buffer), snapshot.width, snapshot.height), 0, 0);
   canvas.hidden = false; $('#placeholder').hidden = true;
   message(snapshot.status || 'Game running.');
+  if(snapshot.fileWarning)message(snapshot.fileWarning,true);
+  if(snapshot.fileRevision!==undefined&&snapshot.fileRevision!==fileRevision){fileRevision=snapshot.fileRevision;savedFiles.refresh();}
 }
 
 async function animate(timestamp, activeEpoch) {
@@ -129,6 +139,7 @@ $('#start').addEventListener('click', async () => {
     if (activeEpoch !== epoch) return;
     running = true; busy = false; render(first); controls();
     pointerMotion = first.pointerMotion === true;
+    if(first.fileSupported)savedFiles.start(first.fileDirectory);
     $('#session').textContent = gameFile.name;
     canvas.focus();
     if (first.animated) { lastTick = 0; animation = requestAnimationFrame(time => animate(time, activeEpoch)); }

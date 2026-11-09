@@ -20,6 +20,15 @@
   <div class="toolbar"><button id="start" class="primary" disabled>Start game <span aria-hidden="true">↗</span></button><button id="stop" disabled>Stop</button><button id="fullscreen" disabled>Fullscreen</button><button id="sound" aria-pressed="false" disabled>Mute sound</button><span id="session">Nothing running</span></div>
   <p id="status" role="status" aria-live="polite">Choose a .wasm game or game-build ZIP to begin.</p>
   <section id="error-panel" role="alert" aria-label="Runner error" hidden><strong>The runner reported an error</strong><pre id="error-details"></pre><button id="dismiss-error">Dismiss</button><button id="reload">Reload latest runner</button></section>
+
+  <section id="local-files" aria-label="Local saved files" hidden>
+    <p><strong>Saved files on this device</strong></p>
+    <label>Import into folder <input data-files="directory" type="text" aria-label="Local import folder"></label>
+    <label>Import saved files <input data-files="import" type="file" multiple></label>
+    <label>Stored files <select data-files="list" aria-label="Stored local files"></select></label>
+    <button data-files="refresh">Refresh files</button><button data-files="download" disabled>Download backup</button>
+    <p data-files="status" role="status"></p>
+  </section>
   <section class="cabinet" aria-label="Game display">
     <div id="placeholder"><span class="cross" aria-hidden="true">+</span><p>Your next game goes here.</p><small>No downloads. No account. Just play.</small></div>
     <canvas id="screen" width="320" height="200" tabindex="0" aria-label="Game screen. Click to focus keyboard controls." hidden></canvas>

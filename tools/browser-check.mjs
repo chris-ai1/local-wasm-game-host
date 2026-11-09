@@ -119,6 +119,40 @@ try{
       }
       console.log(`${rows.length} original game replay frames match through the generic host.`);
     }
+    if(process.env.GAME_SAVE_CHECK){
+      await page.locator('#stop').click();await start();await statusMatches(/^Hauptmenü/);
+      const click=async(x,y)=>{const box=await page.locator('#screen').boundingBox();await page.mouse.click(box.x+(x+.5)*box.width/320,box.y+(y+.5)*box.height/200);};
+      const press=key=>page.keyboard.press(key);
+      await page.locator('#screen').focus();
+      for(const c of 'sCHRIS')await press(c);await press('Enter');
+      for(const c of 'HANSE')await press(c);await press('Enter');
+      for(const c of 'm1111')await press(c);await press('Enter');await press('Enter');await press('j');
+      await statusMatches(/^Schiffstaufe/);
+      for(const c of 'HANSE')await press(c);await press('Enter');await press('Escape');await statusMatches(/^Stadt/);
+      await press('Enter');await press('e');await statusMatches(/^Einstellungen/);
+      await click(150,65);await click(150,65);await click(150,40);await statusMatches(/^Spielstand wählen/);
+      await click(190,175);await statusMatches(/^Spielstandname/);
+      for(let i=0;i<9;i++)await press('Backspace');for(const c of 'HANSE')await press(c);await press('Enter');await click(60,175);
+      await statusMatches(/^Einstellungen/);
+      const files=page.locator('[data-files="list"]');
+      await page.waitForFunction(()=>[...document.querySelector('[data-files="list"]').options].some(o=>o.value==='Games/HANSE.GAME'));
+      await files.selectOption('Games/HANSE.GAME');
+      const downloadPromise=page.waitForEvent('download');await page.locator('[data-files="download"]').click();
+      const download=await downloadPromise;assert.equal(download.suggestedFilename(),'HANSE.GAME');
+      const saved=await readFile(await download.path());assert.equal(saved.length,31992);
+      if(process.env.GAME_SAVE_IMAGE)assert.deepEqual(saved,readFileSync(process.env.GAME_SAVE_IMAGE));
+      await page.locator('[data-files="import"]').setInputFiles({name:'IMPORTED.GAME',mimeType:'application/octet-stream',buffer:saved});
+      await page.waitForFunction(()=>[...document.querySelector('[data-files="list"]').options].some(o=>o.value==='Games/IMPORTED.GAME'));
+      // Full page/worker restart must preserve saved bytes in IndexedDB.
+      await page.reload();await page.locator('#binary').setInputFiles(process.env.GAME_WASM);
+      await page.locator('#data').setInputFiles(process.env.GAME_DATA);await start();await statusMatches(/^Hauptmenü/);
+      await page.locator('#screen').focus();await press('l');await statusMatches(/^Spielstand wählen/);
+      await click(60,30);await click(60,175);await statusMatches(/^Stadt/);
+      await page.locator('[data-files="list"]').selectOption('Games/IMPORTED.GAME');
+      const importedPromise=page.waitForEvent('download');await page.locator('[data-files="download"]').click();
+      const imported=await importedPromise;assert.deepEqual(await readFile(await imported.path()),saved);
+      console.log('Real save/edit/download/import, byte-exact native save comparison, page-reload persistence and load-to-town passed in browser IndexedDB.');
+    }
     if(process.env.GAME_NAVIGATION_CHECK){
       // Optional private-game integration: the recruitment replay ends at the
       // crew prompt. Exercise motion/ticks through actual DOM input next.

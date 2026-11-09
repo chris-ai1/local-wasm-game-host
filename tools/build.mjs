@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const assets = ['app.js', 'worker.js', 'runtime.js', 'game-file.js', 'physical-key.js', 'audio-output.js', 'style.css', 'tokens.css'];
+const assets = ['app.js', 'worker.js', 'runtime.js', 'game-file.js', 'physical-key.js', 'audio-output.js', 'file-storage.js', 'file-panel.js', 'style.css', 'tokens.css'];
 
 export async function build(destination = path.join(root, 'dist')) {
   const contents = new Map();

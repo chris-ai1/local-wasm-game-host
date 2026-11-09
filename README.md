@@ -65,3 +65,11 @@ load an update; a fresh query-string URL also bypasses a cached index page.
 Errors stay in a separate panel until Dismiss or a new Start, independently of
 status messages. "Reload latest runner" navigates to a fresh page and requires
 reselecting the local files.
+
+
+Games with the optional file interface can save into browser-local IndexedDB.
+The “Saved files on this device” panel imports existing saves and downloads
+individual backups. Storage stays available across page reloads and game-build
+changes under the game's stable namespace. Clearing site data removes local
+saves. Both game data and saves remain on the user's device; none are bundled
+with this asset-free host. See `ABI.md` for the file protocol.
