@@ -17,7 +17,7 @@
     <label class="file-card"><span class="step">01 / GAME</span><strong>Choose a game build</strong><span>A .wasm file or a ZIP containing it</span><input id="binary" type="file" accept=".wasm,.zip,application/wasm,application/zip"><span id="binary-name" class="filename">No game selected</span></label>
     <div class="file-card"><label for="data"><span class="step">02 / DATA</span><strong>Choose game data</strong><span>A ZIP or another data file, if needed</span></label><input id="data" type="file"><span id="data-name" class="filename">No data selected</span><button id="clear-data" disabled>Clear data</button></div>
   </section>
-  <div class="toolbar"><button id="start" class="primary" disabled>Start game <span aria-hidden="true">↗</span></button><button id="stop" disabled>Stop</button><button id="fullscreen" disabled>Fullscreen</button><span id="session">Nothing running</span></div>
+  <div class="toolbar"><button id="start" class="primary" disabled>Start game <span aria-hidden="true">↗</span></button><button id="stop" disabled>Stop</button><button id="fullscreen" disabled>Fullscreen</button><button id="sound" aria-pressed="false" disabled>Mute sound</button><span id="session">Nothing running</span></div>
   <p id="status" role="status" aria-live="polite">Choose a .wasm game or game-build ZIP to begin.</p>
   <section id="error-panel" role="alert" aria-label="Runner error" hidden><strong>The runner reported an error</strong><pre id="error-details"></pre><button id="dismiss-error">Dismiss</button><button id="reload">Reload latest runner</button></section>
   <section class="cabinet" aria-label="Game display">

@@ -76,7 +76,7 @@ events and processes batches of up to 32 before copying the next frame. A single
 paste over 256 characters is rejected without sending any of it. Unsupported inputs should be ignored
 with success, unless a game intentionally needs to report an error. This small
 interface supports text and pointer-driven games. The optional physical keyboard
-extension below supplies key-up events; gamepad, audio and save-file channels
+extension below supplies key-up events; gamepad and save-file channels
 remain outside the current protocol.
 
 ## Optional animation
@@ -107,6 +107,33 @@ available for mobile text, buttons and pointer input. The host suppresses
 autorepeat in physical mode and pairs releases only with captured presses.
 Losing focus releases captured keys. A game should ignore physical keys it
 does not implement. Games without the export retain the original behavior.
+
+## Optional stereo audio
+
+Export all four functions below to supply signed 16-bit, little-endian,
+interleaved stereo PCM. Games without these exports retain silent operation.
+No microphone, network access or browser imports are provided to the module.
+
+| Export | Arguments | Result |
+| --- | --- | --- |
+| `game_audio_configure` | sample rate in Hz, 8000–192000 | success/failure |
+| `game_audio_render` | frame count, 1–8192 | success/failure |
+| `game_audio_ptr` | — | PCM buffer pointer |
+| `game_audio_len` | — | PCM byte length, exactly frame count × 4 |
+
+After `game_start`, the host configures audio once with the Web Audio device's
+sample rate, then requests bounded blocks as playback consumes them. A stereo
+frame is left then right; divide each signed sample by 32768 for Web Audio.
+The host validates length/range and copies PCM after rendering, reacquiring
+memory in case it grew. The pointer remains valid until the next mutating call.
+Starting a fresh game resets audio configuration. Rendering audio must not
+advance gameplay, input, display or simulation state.
+
+The runner starts Web Audio from the Start button's gesture, keeps a short
+bounded output queue and stops it on Stop, file changes, failures or restart.
+Mute changes output gain while continuing to consume PCM, preserving the game's
+audio clock. Audio failures are reported independently and leave game input
+available. Games should keep audio generation within the normal worker timeout.
 
 ## Implementing a game
 

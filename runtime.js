@@ -6,10 +6,12 @@ const FUNCTIONS = ['game_abi_version', 'input_resize', 'game_load', 'game_start'
   'game_status_ptr', 'game_status_len', 'error_ptr', 'error_len'];
 const decoder = new TextDecoder();
 const MAX_TEXT = 64 * 1024;
+const AUDIO = ['game_audio_configure', 'game_audio_render', 'game_audio_ptr', 'game_audio_len'];
 
 export class GameRuntime {
   async load(binary, data) {
     this.api = null;
+    this.audioRate = 0;
     const module = await WebAssembly.compile(await unpackGame(binary));
     if (WebAssembly.Module.imports(module).length) {
       throw new Error('This game needs external imports. Choose a self-contained Local Game ABI v1 build.');
@@ -96,4 +98,22 @@ export class GameRuntime {
 
   get animated() { return typeof this.api?.game_tick === 'function'; }
   get pointerMotion() { return typeof this.api?.game_pointer_move === 'function'; }
+  get audioSupported() { return AUDIO.every(name=>typeof this.api?.[name]==='function'); }
+  configureAudio(rate) {
+    if(!this.audioSupported){
+      if(AUDIO.some(name=>typeof this.api?.[name]==='function'))throw new Error('The game has an incomplete audio interface.');
+      return false;
+    }
+    if(!Number.isInteger(rate)||rate<8000||rate>192000)throw new Error('Unsupported audio sample rate.');
+    this.check(this.api.game_audio_configure(rate),'Game audio could not start.');
+    this.audioRate=rate;
+    return true;
+  }
+  audio(frames) {
+    if(!this.audioRate)throw new Error('Game audio is not configured.');
+    if(!Number.isInteger(frames)||frames<1||frames>8192)throw new Error('Invalid audio block size (1–8192 stereo frames).');
+    this.check(this.api.game_audio_render(frames),'Game audio rendering failed.');
+    if(this.api.game_audio_len()!==frames*4)throw new Error('The game returned an invalid audio buffer length.');
+    return this.range(this.api.game_audio_ptr(),frames*4).slice();
+  }
 }

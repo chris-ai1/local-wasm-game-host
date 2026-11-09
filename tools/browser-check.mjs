@@ -27,6 +27,15 @@ await context.route('**/*',async route=>{
   catch{await route.fulfill({status:404,body:'Not found'});}
 });
 const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
+await page.addInitScript(()=>{
+  const Original=window.AudioContext;
+  window.__audioContexts=[];window.__audioBuffers=[];window.__audioGains=[];window.__audioCount=0;
+  if(Original)window.AudioContext=class extends Original{
+    constructor(...args){super(...args);window.__audioContexts.push(this);}
+    createGain(){const gain=super.createGain();window.__audioGains.push(gain);return gain;}
+    createBuffer(...args){const buffer=super.createBuffer(...args);window.__audioBuffers.push(buffer);if(window.__audioBuffers.length>16)window.__audioBuffers.shift();window.__audioCount++;return buffer;}
+  };
+});
 const choose=async bytes=>page.locator('#binary').setInputFiles({name:'fixture.wasm',mimeType:'application/wasm',buffer:Buffer.from(bytes)});
 const start=async()=>page.locator('#start').click();
 const statusMatches=async pattern=>{await page.waitForFunction(source=>new RegExp(source).test(document.querySelector('#status').textContent),pattern.source);};
@@ -85,6 +94,16 @@ try{
     await page.locator('#binary').setInputFiles(process.env.GAME_WASM_ZIP||process.env.GAME_WASM);
     if(process.env.GAME_DATA)await page.locator('#data').setInputFiles(process.env.GAME_DATA);
     await start();await statusMatches(/^Hauptmenü/);
+    if(process.env.GAME_AUDIO_CHECK){
+      await page.waitForFunction(()=>window.__audioBuffers.some(b=>b.getChannelData(0).some(v=>v!==0)));
+      assert.equal(await page.evaluate(()=>window.__audioContexts.at(-1).state),'running');
+      const count=await page.evaluate(()=>window.__audioCount);
+      await page.locator('#sound').click();await page.waitForFunction(()=>window.__audioGains.at(-1).gain.value===0);
+      await page.waitForFunction(n=>window.__audioCount>n,count);
+      await page.locator('#sound').click();await page.waitForFunction(()=>window.__audioGains.at(-1).gain.value===1);
+      assert.equal(await page.evaluate(()=>document.activeElement.id),'screen');
+      console.log('Real game PCM reaches Web Audio; mute preserves pulling and unmute restores gain.');
+    }
     if(process.env.GAME_REPLAY){
       const rows=readFileSync(process.env.GAME_REPLAY,'utf8').trim().split('\n');
       for(let index=0;index<rows.length;index++){

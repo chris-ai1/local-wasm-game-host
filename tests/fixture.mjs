@@ -8,7 +8,7 @@ const vector=items=>[...leb(items.length),...items.flat()];
 const constant=value=>[0x41,...signed(value)];
 
 export function fixture(options={}) {
-  const {version=1,width=2,height=1,pointer=32,missing='',badStart=false,hang=false,grow=false,tick=false,motion=false,physical=false,imports=false}=options;
+  const {version=1,width=2,height=1,pointer=32,missing='',badStart=false,hang=false,grow=false,tick=false,motion=false,physical=false,imports=false,audio=false,audioPointer=640,audioLength=null,audioGrow=false,badAudio=false}=options;
   const types=[[0x60,0,1,0x7f],[0x60,1,0x7f,1,0x7f],[0x60,3,0x7f,0x7f,0x7f,1,0x7f],[0x60,2,0x7f,0x7f,1,0x7f]];
   const definitions=[
     ['game_abi_version',0,constant(version)],['input_resize',1,constant(4096)],
@@ -20,12 +20,19 @@ export function fixture(options={}) {
     ['error_ptr',0,constant(256)],['error_len',0,constant(12)],
     ...(tick?[['game_tick',1,constant(1)]]:[]),
     ...(physical?[['game_keyboard_mode',0,constant(1)]]:[]),
+    ...(audio?[
+      ['game_audio_configure',1,constant(badAudio?0:1)],
+      ['game_audio_render',1,[...(audioGrow?[...constant(1),0x40,0,0x1a]:[]),...constant(512),0x20,0,...constant(4),0x6c,0x36,2,0,...constant(1)]],
+      ['game_audio_ptr',0,constant(audioPointer)],
+      ['game_audio_len',0,audioLength===null?[...constant(512),0x28,2,0]:constant(audioLength)]
+    ]:[]),
     ...(motion?[['game_pointer_move',3,[...constant(34),0x20,0,0x3a,0,0,...constant(1)]]]:[])
   ];
   const importCount=imports?1:0;
   const exports=definitions.flatMap(([name],index)=>name===missing?[]:[[...str(name),0,...leb(index+importCount)]]);
   exports.push([...str('memory'),2,0]);
   const segments=[[32,[0,11,12,255,100,101,102,255]],[128,[...new TextEncoder().encode('Ready')]],[256,[...new TextEncoder().encode('test failure')]]];
+  if(audio)segments.push([640,[0,64,0,192,0,32,0,224]]);
   const bodies=definitions.map(([, ,code])=>{const body=[0,...code,0x0b];return [...leb(body.length),...body];});
   return new Uint8Array([0,97,115,109,1,0,0,0,
     ...section(1,vector(types)),

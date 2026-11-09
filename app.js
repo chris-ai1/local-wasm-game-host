@@ -1,5 +1,6 @@
 // Authors: Christian Reitwiessner
 import {physicalKeyboard} from './physical-key.js';
+import {AudioOutput} from './audio-output.js';
 const $ = selector => document.querySelector(selector);
 const binary = $('#binary'), data = $('#data'), canvas = $('#screen');
 const context = canvas.getContext('2d', {alpha: false});
@@ -10,6 +11,7 @@ let lastPointer = {x: 0, y: 0};
 let inputQueue = [], inputBusy = false;
 let pointerMotion = false;
 let physicalKeys = false;
+let audio;
 const resetPhysicalKeys=physicalKeyboard(canvas,{enabled:()=>running&&physicalKeys,send:(usage,pressed)=>send(12,usage,Number(pressed))});
 const pending = new Map();
 const errorMessages = [];
@@ -35,6 +37,7 @@ function controls() {
   $('#start').disabled = !binary.files.length || busy;
   $('#stop').disabled = !worker && !busy;
   $('#fullscreen').disabled = !running || !document.fullscreenEnabled;
+  $('#sound').disabled = !running || !audio || audio.stopped;
   $('#clear-data').disabled = !data.files.length;
   keyboard.disabled = !running;
   document.querySelectorAll('[data-key], #right-click').forEach(button => button.disabled = !running);
@@ -48,6 +51,8 @@ function stop(text = 'Stopped. Start creates a fresh game.') {
   physicalKeys = false;
   resetPhysicalKeys();
   cancelAnimationFrame(animation);
+  audio?.stop();audio=undefined;
+  $('#sound').textContent='Mute sound';$('#sound').setAttribute('aria-pressed','false');
   worker?.terminate(); worker = undefined;
   for (const {reject, timer} of pending.values()) { clearTimeout(timer); reject(new Error('Game stopped.')); }
   pending.clear();
@@ -105,6 +110,8 @@ $('#start').addEventListener('click', async () => {
   const activeEpoch = epoch, gameFile = binary.files[0], dataFile = data.files[0];
   if (!gameFile) return;
   busy = true; controls(); message('Opening local files…');
+  let audioError;
+  try {audio=new AudioOutput();}catch(error){audioError=error;}
   try {
     if (gameFile.size > MAX_BINARY) throw new Error('Game binary exceeds 64 MiB.');
     if (dataFile && dataFile.size > MAX_DATA) throw new Error('Game data exceeds 128 MiB.');
@@ -125,10 +132,31 @@ $('#start').addEventListener('click', async () => {
     $('#session').textContent = gameFile.name;
     canvas.focus();
     if (first.animated) { lastTick = 0; animation = requestAnimationFrame(time => animate(time, activeEpoch)); }
+    if(first.audioSupported&&audio){
+      const current=audio;
+      const audioFailed=error=>{if(activeEpoch===epoch){message(`Audio unavailable: ${error.message}. The game is still running.`,true);controls();}};
+      current.start(async rate=>(await request({type:'audio-configure',rate})).supported,
+        async frames=>(await request({type:'audio',frames})).pcm,audioFailed).catch(error=>{if(activeEpoch===epoch){current.stop();audioFailed(error);}});
+    } else {
+      audio?.stop();
+      if(first.audioSupported&&audioError)message(`Audio unavailable: ${audioError.message}. The game is still running.`,true);
+    }
+    controls();
   } catch (error) { fail(error, activeEpoch); }
 });
 
 $('#stop').addEventListener('click', () => stop());
+$('#sound').addEventListener('click',()=>{
+  if(!audio||audio.stopped)return;
+  const current=audio,activeEpoch=epoch;
+  current.context.resume().catch(error=>{
+    if(activeEpoch===epoch&&audio===current&&running)message(`Audio unavailable: ${error.message}. The game is still running.`,true);
+  });
+  audio.setMuted(!audio.muted);
+  $('#sound').textContent=audio.muted?'Unmute sound':'Mute sound';
+  $('#sound').setAttribute('aria-pressed',String(audio.muted));
+  canvas.focus();
+});
 $('#dismiss-error').addEventListener('click', clearErrors);
 $('#reload').addEventListener('click', () => {
   const url = new URL(location.href);

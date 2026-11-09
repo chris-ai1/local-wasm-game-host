@@ -22,6 +22,12 @@ select `web/patrizier.wasm` (or the `patrizier-web-….zip` release build) and y
 German interface and current gameplay limitations come from the selected module.
 The main game repository and binaries are not published with this site.
 
+Games can supply optional signed 16-bit stereo PCM through the audio extension
+in `ABI.md`. Start enables Web Audio; Mute sound silences the output while the
+game's music clock continues. Stop and file changes close playback. Audio errors
+leave the game running and remain in the runner's error panel. No audio or other
+game data is fetched, uploaded or bundled with this site.
+
 Games can opt into physical keyboard input through `game_keyboard_mode`.
 The host then forwards USB HID usage IDs with separate press/release events,
 including function keys, while suppressing browser key repeat. Other games
