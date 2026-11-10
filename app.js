@@ -47,7 +47,8 @@ function message(text, error = false) {
 function controls() {
   $('#start').disabled = !binary.files.length || busy;
   $('#stop').disabled = !worker && !busy;
-  $('#fullscreen').disabled = !running || !document.fullscreenEnabled;
+  $('#fullscreen').disabled = !running;
+  $('#play-view').disabled = !running;
   $('#sound').disabled = !running || !audio || audio.stopped;
   $('#clear-data').disabled = !data.files.length;
   keyboard.disabled = !running;
@@ -55,6 +56,7 @@ function controls() {
 }
 
 function stop(text = 'Stopped. Start creates a fresh game.') {
+  setPlayView(false);
   epoch++;savedFiles.stop();fileRevision=0;
   running = false; busy = false;
   inputQueue = []; inputBusy = false;
@@ -145,6 +147,7 @@ $('#start').addEventListener('click', async () => {
     if(first.fileSupported)savedFiles.start(first.fileDirectory);
     $('#session').textContent = gameFile.name;
     canvas.focus();
+    if(matchMedia('(pointer:coarse)').matches)setPlayView(true);
     if (first.animated) { lastTick = 0; animation = requestAnimationFrame(time => animate(time, activeEpoch)); }
     if(first.audioSupported&&audio){
       const current=audio;
@@ -160,6 +163,19 @@ $('#start').addEventListener('click', async () => {
 });
 
 $('#stop').addEventListener('click', () => stop());
+function setPlayView(enabled) {
+  if(!enabled&&document.fullscreenElement)document.exitFullscreen?.().catch(()=>{});
+  document.body.classList.toggle('play-view',enabled);
+  $('#play-view').textContent=enabled?'Exit play view':'Play view';
+  $('#play-view').setAttribute('aria-pressed',String(enabled));
+  updatePlayHeight();
+}
+function updatePlayHeight() {
+  document.documentElement.style.setProperty('--play-height',`${window.visualViewport?.height||window.innerHeight}px`);
+}
+$('#play-view').addEventListener('click',()=>{setPlayView(!document.body.classList.contains('play-view'));canvas.focus();});
+window.visualViewport?.addEventListener('resize',updatePlayHeight);
+window.addEventListener('resize',updatePlayHeight);
 $('#sound').addEventListener('click',()=>{
   if(!audio||audio.stopped)return;
   const current=audio,activeEpoch=epoch;
@@ -254,7 +270,9 @@ keyboard.addEventListener('keydown', event => {
 document.querySelectorAll('[data-key]').forEach(button => button.addEventListener('click', () => send(Number(button.dataset.key), Number(button.dataset.value || 0))));
 $('#right-click').addEventListener('click', () => send(6, lastPointer.x, lastPointer.y));
 $('#fullscreen').addEventListener('click', async () => {
-  try { await $('.cabinet').requestFullscreen(); canvas.focus(); }
-  catch (error) { message(`Fullscreen unavailable: ${error.message}`, true); }
+  setPlayView(true);
+  try { if(document.fullscreenEnabled)await $('main').requestFullscreen(); }
+  catch { /* Play view remains available when the browser declines fullscreen. */ }
+  canvas.focus();
 });
 controls();

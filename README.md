@@ -4,8 +4,8 @@ Authors: Christian Reitwiessner
 
 A generic static GitHub Pages host for a **locally selected `.wasm` game (or ZIP containing it) and
 optional data file**. It contains no game binaries, original archives or assets.
-Files stay in browser memory for the session. There are no uploads, analytics,
-remote scripts, runtime dependencies or storage APIs.
+Selected files stay in browser memory for the session; optional saves use local
+IndexedDB. There are no uploads, analytics, remote scripts or runtime dependencies.
 
 Games implement [Local Game ABI v1](ABI.md): a framebuffer, input events and
 status text. This is a compatible-module runner, not a universal emulator.
@@ -18,9 +18,18 @@ the host runtime. It works under GitHub Pages subpaths.
 4. Click the display to use the keyboard, or use the touch controls.
 
 For the private Der Patrizier reimplementation, run `make web` in that checkout,
-select `web/patrizier.wasm` (or the `patrizier-web-….zip` release build) and your original `patrizier.zip`. Its data parser,
+select `web/patrizier.wasm` (or a ZIP you package locally) and your original `patrizier.zip`. Its data parser,
 German interface and current gameplay limitations come from the selected module.
 The main game repository and binaries are not published with this site.
+
+On phones, a running game automatically opens Play view. The display and touch
+controls fit the visible viewport in portrait or landscape, including around
+the software keyboard. Type text and Numbers open collapsible input controls;
+buttons are at least 44 pixels high and text entry uses a 16-pixel font to avoid
+iPhone input zoom. Exit play view restores the file controls without restarting
+the game. Fullscreen includes the controls when supported; Play view works
+without that API. This runner layout cannot enlarge a game's own menu hitboxes;
+games still need touch-friendly interfaces for small in-game targets.
 
 Games can supply optional signed 16-bit stereo PCM through the audio extension
 in `ABI.md`. Start enables Web Audio; Mute sound silences the output while the

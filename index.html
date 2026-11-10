@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="description" content="Run a compatible WebAssembly game from your own files, entirely in your browser.">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; worker-src 'self'; connect-src 'none'; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>Local Game Room</title>
@@ -17,7 +17,7 @@
     <label class="file-card"><span class="step">01 / GAME</span><strong>Choose a game build</strong><span>A .wasm file or a ZIP containing it</span><input id="binary" type="file" accept=".wasm,.zip,application/wasm,application/zip"><span id="binary-name" class="filename">No game selected</span></label>
     <div class="file-card"><label for="data"><span class="step">02 / DATA</span><strong>Choose game data</strong><span>A ZIP or another data file, if needed</span></label><input id="data" type="file"><span id="data-name" class="filename">No data selected</span><button id="clear-data" disabled>Clear data</button></div>
   </section>
-  <div class="toolbar"><button id="start" class="primary" disabled>Start game <span aria-hidden="true">↗</span></button><button id="stop" disabled>Stop</button><button id="fullscreen" disabled>Fullscreen</button><button id="sound" aria-pressed="false" disabled>Mute sound</button><span id="session">Nothing running</span></div>
+  <div class="toolbar"><button id="start" class="primary" disabled>Start game <span aria-hidden="true">↗</span></button><button id="stop" disabled>Stop</button><button id="play-view" aria-pressed="false" disabled>Play view</button><button id="fullscreen" disabled>Fullscreen</button><button id="sound" aria-pressed="false" disabled>Mute sound</button><span id="session">Nothing running</span></div>
   <p id="status" role="status" aria-live="polite">Choose a .wasm game or game-build ZIP to begin.</p>
   <section id="error-panel" role="alert" aria-label="Runner error" hidden><strong>The runner reported an error</strong><pre id="error-details"></pre><button id="dismiss-error">Dismiss</button><button id="reload">Reload latest runner</button></section>
 
@@ -34,10 +34,11 @@
     <canvas id="screen" width="320" height="200" tabindex="0" aria-label="Game screen. Click to focus keyboard controls." hidden></canvas>
   </section>
   <div class="controls" aria-label="Game input controls">
-    <label>Touch keyboard <input id="keyboard" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Type game input" disabled></label>
+    <details class="input-drawer"><summary>Type text</summary><label>Touch keyboard <input id="keyboard" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Type game input" disabled></label></details>
+    <details class="input-drawer number-drawer"><summary>Numbers</summary><div class="number-pad" aria-label="Quantity keypad"><button data-key="1" data-value="49" disabled>1</button><button data-key="1" data-value="50" disabled>2</button><button data-key="1" data-value="51" disabled>3</button><button data-key="1" data-value="52" disabled>4</button><button data-key="1" data-value="53" disabled>5</button><button data-key="1" data-value="54" disabled>6</button><button data-key="1" data-value="55" disabled>7</button><button data-key="1" data-value="56" disabled>8</button><button data-key="1" data-value="57" disabled>9</button><button data-key="1" data-value="48" disabled>0</button></div></details>
     <div class="keys"><button data-key="8" aria-label="Left arrow" disabled>←</button><button data-key="9" aria-label="Right arrow" disabled>→</button><button data-key="3" disabled>⌫</button><button data-key="4" disabled>Esc</button><button data-key="1" data-value="32" disabled>Space</button><button data-key="2" disabled>Return</button><button id="right-click" disabled>Right click</button></div>
   </div>
-  <details><summary>Which games work here?</summary><p>This room runs WebAssembly games that implement the <a href="./ABI.md">Local Game ABI v1</a>: an RGBA display, text status and input events. It does not run native desktop or Amiga executables directly.</p><p>Keyboard input goes to the focused game screen. The touch keyboard and buttons also work on mobile. Right click uses the most recent pointer position. Stop clears the running game; Start creates a fresh instance.</p></details>
+  <details><summary>Which games work here?</summary><p>This room runs WebAssembly games that implement the <a href="./ABI.md">Local Game ABI v1</a>: an RGBA display, text status and input events. It does not run native desktop or Amiga executables directly.</p><p>Keyboard input goes to the focused game screen. On phones, Play view fits the display and touch controls around the available screen, including the on-screen keyboard. Type text and Numbers open their input controls. Exit play view returns to file controls without restarting. Right click uses the most recent pointer position. Stop clears the running game; Start creates a fresh instance.</p></details>
 </main>
 <footer><span>Made for local play. <span id="build">Development build</span></span><a href="https://github.com/Chris-ai1/local-wasm-game-host">Source &amp; interface</a><span>Authors: Christian Reitwiessner</span></footer>
 <script type="module" src="./app.js"></script>
