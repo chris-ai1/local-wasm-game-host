@@ -31,6 +31,14 @@ the game. Fullscreen includes the controls when supported; Play view works
 without that API. This runner layout cannot enlarge a game's own menu hitboxes;
 games still need touch-friendly interfaces for small in-game targets.
 
+The optional Improved mode checkbox can be chosen before Start and changed
+while playing. Supporting modules expose the getter/setter pair in `ABI.md`;
+the worker orders mode changes with other inputs. Each game defines which
+fixes or usability features it enables. Games without the extension continue
+normally and disable that checkbox while running. Original mode is selected
+by default. Neither the runner nor its mode control contains game-specific
+simulation rules.
+
 Games can supply optional signed 16-bit stereo PCM through the audio extension
 in `ABI.md`. Start enables Web Audio; Mute sound silences the output while the
 game's music clock continues. Stop and file changes close playback. Audio errors

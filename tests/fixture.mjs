@@ -8,18 +8,22 @@ const vector=items=>[...leb(items.length),...items.flat()];
 const constant=value=>[0x41,...signed(value)];
 
 export function fixture(options={}) {
-  const {version=1,width=2,height=1,pointer=32,missing='',badStart=false,hang=false,grow=false,tick=false,motion=false,physical=false,imports=false,audio=false,audioPointer=640,audioLength=null,audioGrow=false,badAudio=false}=options;
+  const {version=1,width=2,height=1,pointer=32,missing='',badStart=false,hang=false,grow=false,tick=false,motion=false,physical=false,improvements=false,imports=false,audio=false,audioPointer=640,audioLength=null,audioGrow=false,badAudio=false}=options;
   const types=[[0x60,0,1,0x7f],[0x60,1,0x7f,1,0x7f],[0x60,3,0x7f,0x7f,0x7f,1,0x7f],[0x60,2,0x7f,0x7f,1,0x7f]];
   const definitions=[
     ['game_abi_version',0,constant(version)],['input_resize',1,constant(4096)],
     ['game_load',0,constant(1)],
-    ['game_start',0,hang?[0x03,0x40,0x0c,0,0x0b,...constant(1)]:[...(grow?[...constant(1),0x40,0,0x1a]:[]),...constant(badStart?0:1)]],
+    ['game_start',0,hang?[0x03,0x40,0x0c,0,0x0b,...constant(1)]:[...(grow?[...constant(1),0x40,0,0x1a]:[]),...(improvements?[...constant(32),...constant(520),0x28,2,0,0x3a,0,0]:[]),...constant(badStart?0:1)]],
     ['game_input',2,[...constant(32),0x20,0,0x3a,0,0,...constant(33),0x20,1,0x3a,0,0,...(physical?[...constant(34),0x20,2,0x3a,0,0]:[]),...constant(1)]],
     ['game_frame_width',0,constant(width)],['game_frame_height',0,constant(height)],['game_frame_ptr',0,constant(pointer)],
     ['game_status_ptr',0,constant(128)],['game_status_len',0,constant(5)],
     ['error_ptr',0,constant(256)],['error_len',0,constant(12)],
     ...(tick?[['game_tick',1,constant(1)]]:[]),
     ...(physical?[['game_keyboard_mode',0,constant(1)]]:[]),
+    ...(improvements?[
+      ['game_improved_mode',0,[...constant(520),0x28,2,0]],
+      ['game_set_improved_mode',1,[...constant(520),0x20,0,0x36,2,0,...constant(1)]],
+    ]:[]),
     ...(audio?[
       ['game_audio_configure',1,constant(badAudio?0:1)],
       ['game_audio_render',1,[...(audioGrow?[...constant(1),0x40,0,0x1a]:[]),...constant(512),0x20,0,...constant(4),0x6c,0x36,2,0,...constant(1)]],

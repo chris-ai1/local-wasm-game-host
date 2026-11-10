@@ -65,6 +65,23 @@ test('runs a generic module with local data and copies RGBA output',async()=>{
   assert.throws(()=>game.inputs(Array(33).fill({kind:1,a:0,b:0})),/input batch/);
 });
 
+test('optional improvements apply before start and in the ordered input queue',async()=>{
+  const game=new GameRuntime();
+  const first=await game.load(fixture({improvements:true}),null,{improvedMode:true});
+  assert.equal(first.improvedMode,true);assert.equal(first.improvementsSupported,true);
+  assert.equal(first.frame[0],1,'game_start sees the selected mode');
+  const frame=game.inputs([{improvedMode:false},{kind:1,a:65,b:0}]);
+  assert.equal(frame.improvedMode,false);assert.equal(frame.frame[1],65);
+  assert.throws(()=>game.setImprovedMode(1),/Original or Improved/);
+  game.setImprovedMode(true);assert.equal(game.snapshot().improvedMode,true);
+  await game.load(fixture(),null,{improvedMode:true});
+  assert.equal(game.snapshot().improvementsSupported,false);
+  assert.throws(()=>game.setImprovedMode(true),/does not provide/);
+  for(const missing of ['game_improved_mode','game_set_improved_mode']){
+    await assert.rejects(game.load(fixture({improvements:true,missing}),null),/incomplete improvements/);
+  }
+});
+
 test('supports no-data games, memory growth, and optional ticks',async()=>{
   const game=new GameRuntime();await game.load(fixture({grow:true,tick:true}),null);
   assert.equal(game.api.memory.buffer.byteLength,131072);

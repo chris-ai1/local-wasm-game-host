@@ -9,7 +9,7 @@ const MAX_TEXT = 64 * 1024;
 const AUDIO = ['game_audio_configure', 'game_audio_render', 'game_audio_ptr', 'game_audio_len'];
 
 export class GameRuntime {
-  async load(binary, data) {
+  async load(binary, data, {improvedMode=false}={}) {
     this.api = null;
     this.audioRate = 0;
     this.keyboardDown = new Map();
@@ -32,6 +32,9 @@ export class GameRuntime {
       this.range(pointer, bytes.length).set(bytes);
       this.check(api.game_load(), 'Game data could not be loaded.');
     }
+    const modeExports=['game_improved_mode','game_set_improved_mode'];
+    if(modeExports.some(name=>typeof api[name]==='function')&&!this.improvementsSupported)throw new Error('The game has an incomplete improvements interface.');
+    if(this.improvementsSupported)this.setImprovedMode(improvedMode);
     this.check(api.game_start(), 'Game could not start.');
     return this.snapshot();
   }
@@ -75,7 +78,9 @@ export class GameRuntime {
     const status = this.text(api.game_status_ptr(), api.game_status_len());
     const physicalKeyboard = typeof api.game_keyboard_mode === 'function' && api.game_keyboard_mode() === 1;
     const physicalKeyboardSupported=typeof api.game_keyboard_mode==='function';
-    return {width, height, frame, status, physicalKeyboard,physicalKeyboardSupported};
+    const improvementsSupported=this.improvementsSupported;
+    const improvedMode=improvementsSupported&&api.game_improved_mode()===1;
+    return {width, height, frame, status, physicalKeyboard,physicalKeyboardSupported,improvementsSupported,improvedMode};
   }
 
   input(kind, a, b) {
@@ -86,6 +91,7 @@ export class GameRuntime {
     if (!this.api) throw new Error('No game is running.');
     if (!Array.isArray(events) || events.length > 32) throw new Error('Invalid input batch.');
     for (const event of events) {
+      if(typeof event.improvedMode==='boolean'){this.setImprovedMode(event.improvedMode);continue;}
       if(event.keyboard){this.keyboardInput(event);continue;}
       const {kind,a,b}=event;
       if (kind === 10) {
@@ -119,6 +125,12 @@ export class GameRuntime {
   }
 
   get animated() { return typeof this.api?.game_tick === 'function'; }
+  get improvementsSupported() { return ['game_improved_mode','game_set_improved_mode'].every(name=>typeof this.api?.[name]==='function'); }
+  setImprovedMode(enabled) {
+    if(typeof enabled!=='boolean')throw new Error('Choose Original or Improved mode.');
+    if(!this.improvementsSupported)throw new Error('This build does not provide optional improvements.');
+    this.check(this.api.game_set_improved_mode(Number(enabled)),'Could not change game mode.');
+  }
   get pointerMotion() { return typeof this.api?.game_pointer_move === 'function'; }
   get audioSupported() { return AUDIO.every(name=>typeof this.api?.[name]==='function'); }
   configureAudio(rate) {

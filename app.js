@@ -12,6 +12,7 @@ let lastPointer = {x: 0, y: 0};
 let inputQueue = [], inputBusy = false;
 let pointerMotion = false;
 let physicalKeyboardSupported = false;
+let improvementsSupported = false;
 let audio;
 const resetPhysicalKeys=physicalKeyboard(canvas,{
   enabled:()=>running&&physicalKeyboardSupported,repeats:true,
@@ -49,6 +50,7 @@ function controls() {
   $('#stop').disabled = !worker && !busy;
   $('#fullscreen').disabled = !running;
   $('#play-view').disabled = !running;
+  $('#improved-mode').disabled = busy||(running&&!improvementsSupported);
   $('#sound').disabled = !running || !audio || audio.stopped;
   $('#clear-data').disabled = !data.files.length;
   keyboard.disabled = !running;
@@ -62,6 +64,7 @@ function stop(text = 'Stopped. Start creates a fresh game.') {
   inputQueue = []; inputBusy = false;
   pointerMotion = false;
   physicalKeyboardSupported = false;
+  improvementsSupported = false;
   resetPhysicalKeys();
   cancelAnimationFrame(animation);
   audio?.stop();audio=undefined;
@@ -96,6 +99,11 @@ function request(payload, transfer = [], timeout = 3000) {
 }
 
 function render(snapshot) {
+  improvementsSupported=snapshot.improvementsSupported===true;
+  if(running){
+    $('#improved-mode').checked=snapshot.improvedMode===true;
+    $('#mode-note').textContent=improvementsSupported?(snapshot.improvedMode?'Improved rules enabled':'Original rules'):'Not supported by this build';
+  }
   if (canvas.width !== snapshot.width || canvas.height !== snapshot.height) {
     canvas.width = snapshot.width; canvas.height = snapshot.height;
   }
@@ -139,7 +147,7 @@ $('#start').addEventListener('click', async () => {
     };
     worker.onerror = event => fail(new Error(event.message || 'Game worker failed to start.'), activeEpoch);
     const transfers = dataBytes === null ? [gameBytes] : [gameBytes, dataBytes];
-    const first = await request({type: 'load', binary: gameBytes, data: dataBytes}, transfers, 20000);
+    const first = await request({type: 'load', binary: gameBytes, data: dataBytes,improvedMode:$('#improved-mode').checked}, transfers, 20000);
     if (activeEpoch !== epoch) return;
     running = true; busy = false; render(first); controls();
     pointerMotion = first.pointerMotion === true;
@@ -163,6 +171,9 @@ $('#start').addEventListener('click', async () => {
 });
 
 $('#stop').addEventListener('click', () => stop());
+$('#improved-mode').addEventListener('change',()=>{
+  if(running)queueInput({improvedMode:$('#improved-mode').checked});
+});
 function setPlayView(enabled) {
   if(!enabled&&document.fullscreenElement)document.exitFullscreen?.().catch(()=>{});
   document.body.classList.toggle('play-view',enabled);

@@ -114,6 +114,21 @@ Keys pressed in logical mode retain text autorepeat while that mode remains
 active. A held logical key cannot become a fresh physical press on a mode
 change; a held raw key cannot type into a new text field before its release.
 
+## Optional improvements mode
+
+Export both `game_improved_mode() -> u32` and
+`game_set_improved_mode(enabled: u32) -> success/failure` to opt into the
+runner's Original/Improved checkbox. Mode is 0 or 1. The runner applies the
+chosen setting after optional data loading and before `game_start`, and sends
+later changes through the worker's ordered input queue. Getter calls must not
+mutate game state. Modules without the pair retain their existing behavior;
+the checkbox becomes unavailable while such a module is running.
+
+The module defines which corrections or usability changes this enables.
+Switching should affect future actions without replaying past ones or changing
+simulation state merely because the setting changed. The module decides how
+this setting and any additional improvement metadata persist across saves.
+
 ## Optional stereo audio
 
 Export all four functions below to supply signed 16-bit, little-endian,

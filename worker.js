@@ -7,7 +7,7 @@ let queue=Promise.resolve();
 async function handle(message) {
   try {
     let snapshot;
-    if (message.type === 'load') { snapshot = await runtime.load(message.binary, message.data);files.attach(runtime.api); }
+    if (message.type === 'load') { snapshot = await runtime.load(message.binary, message.data,{improvedMode:message.improvedMode===true});files.attach(runtime.api); }
     else if (message.type === 'input') snapshot = runtime.input(message.kind, message.a, message.b);
     else if (message.type === 'inputs') {
       if(!Array.isArray(message.events)||message.events.length>32)throw new Error('Invalid input batch.');
