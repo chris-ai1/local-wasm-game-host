@@ -15,13 +15,20 @@ export function keyboardUsage(code) {
     AltRight:230,MetaRight:231}[code];
 }
 
-export function physicalKeyboard(element,{enabled,send}) {
+export function logicalKey(event) {
+  if(!event||event.ctrlKey||event.metaKey||event.altKey||event.isComposing)return null;
+  const kind={Enter:2,Backspace:3,Escape:4,ArrowLeft:8,ArrowRight:9}[event.key];
+  if(kind)return {kind,a:0,b:0};
+  return [...event.key].length===1?{kind:1,a:event.key.codePointAt(0),b:0}:null;
+}
+
+export function physicalKeyboard(element,{enabled,send,repeats=false}) {
   const pending=new Set();
   element.addEventListener('keydown',event=>{
     const usage=keyboardUsage(event.code);
     if(!enabled()||usage===undefined)return;
     event.preventDefault();event.stopImmediatePropagation();
-    if(!pending.has(usage)){pending.add(usage);send(usage,true);}
+    if(!pending.has(usage)||repeats){pending.add(usage);send(usage,true,event);}
   },true);
   element.addEventListener('keyup',event=>{
     const usage=keyboardUsage(event.code);

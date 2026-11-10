@@ -12,6 +12,7 @@ export class GameRuntime {
   async load(binary, data) {
     this.api = null;
     this.audioRate = 0;
+    this.keyboardDown = new Map();
     const module = await WebAssembly.compile(await unpackGame(binary));
     if (WebAssembly.Module.imports(module).length) {
       throw new Error('This game needs external imports. Choose a self-contained Local Game ABI v1 build.');
@@ -73,7 +74,8 @@ export class GameRuntime {
     const frame = this.range(api.game_frame_ptr(), width * height * 4).slice();
     const status = this.text(api.game_status_ptr(), api.game_status_len());
     const physicalKeyboard = typeof api.game_keyboard_mode === 'function' && api.game_keyboard_mode() === 1;
-    return {width, height, frame, status, physicalKeyboard};
+    const physicalKeyboardSupported=typeof api.game_keyboard_mode==='function';
+    return {width, height, frame, status, physicalKeyboard,physicalKeyboardSupported};
   }
 
   input(kind, a, b) {
@@ -83,12 +85,32 @@ export class GameRuntime {
   inputs(events) {
     if (!this.api) throw new Error('No game is running.');
     if (!Array.isArray(events) || events.length > 32) throw new Error('Invalid input batch.');
-    for (const {kind, a, b} of events) {
+    for (const event of events) {
+      if(event.keyboard){this.keyboardInput(event);continue;}
+      const {kind,a,b}=event;
       if (kind === 10) {
         if (this.pointerMotion) this.check(this.api.game_pointer_move(a, b), 'Pointer motion failed.');
       } else this.check(this.api.game_input(kind, a, b), 'Game input failed.');
     }
     return this.snapshot();
+  }
+
+  keyboardInput({usage,pressed,fallback}) {
+    // Decide in the worker after all earlier inputs and file replies. A page
+    // snapshot can still describe the menu that the preceding key just left.
+    const previous=this.keyboardDown.get(usage);
+    if(!pressed){
+      this.keyboardDown.delete(usage);
+      if(previous===true)this.check(this.api.game_input(12,usage,0),'Game input failed.');
+      return;
+    }
+    const physical=typeof this.api.game_keyboard_mode==='function'&&this.api.game_keyboard_mode()===1;
+    if(previous===true)return; // Raw keys never autorepeat into a new text field.
+    if(previous===undefined){
+      this.keyboardDown.set(usage,physical);
+      if(physical){this.check(this.api.game_input(12,usage,1),'Game input failed.');return;}
+    }
+    if(!physical&&fallback)this.check(this.api.game_input(fallback.kind,fallback.a,fallback.b),'Game input failed.');
   }
 
   tick(milliseconds) {

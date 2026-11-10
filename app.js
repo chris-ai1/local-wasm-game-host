@@ -1,5 +1,5 @@
 // Authors: Christian Reitwiessner
-import {physicalKeyboard} from './physical-key.js';
+import {physicalKeyboard,logicalKey} from './physical-key.js';
 import {AudioOutput} from './audio-output.js';
 import {filePanel} from './file-panel.js';
 const $ = selector => document.querySelector(selector);
@@ -11,9 +11,12 @@ let worker, epoch = 0, requestId = 0, running = false, busy = false, animation =
 let lastPointer = {x: 0, y: 0};
 let inputQueue = [], inputBusy = false;
 let pointerMotion = false;
-let physicalKeys = false;
+let physicalKeyboardSupported = false;
 let audio;
-const resetPhysicalKeys=physicalKeyboard(canvas,{enabled:()=>running&&physicalKeys,send:(usage,pressed)=>send(12,usage,Number(pressed))});
+const resetPhysicalKeys=physicalKeyboard(canvas,{
+  enabled:()=>running&&physicalKeyboardSupported,repeats:true,
+  send:(usage,pressed,event)=>queueInput({keyboard:true,usage,pressed,fallback:pressed?logicalKey(event):null}),
+});
 const savedFiles=filePanel($('#local-files'),{
   list:async()=>(await request({type:'files-list'})).paths,
   importFile:async(path,bytes)=>request({type:'files-import',path,bytes},[bytes],20000),
@@ -56,7 +59,7 @@ function stop(text = 'Stopped. Start creates a fresh game.') {
   running = false; busy = false;
   inputQueue = []; inputBusy = false;
   pointerMotion = false;
-  physicalKeys = false;
+  physicalKeyboardSupported = false;
   resetPhysicalKeys();
   cancelAnimationFrame(animation);
   audio?.stop();audio=undefined;
@@ -91,7 +94,6 @@ function request(payload, transfer = [], timeout = 3000) {
 }
 
 function render(snapshot) {
-  physicalKeys = snapshot.physicalKeyboard === true;
   if (canvas.width !== snapshot.width || canvas.height !== snapshot.height) {
     canvas.width = snapshot.width; canvas.height = snapshot.height;
   }
@@ -139,6 +141,7 @@ $('#start').addEventListener('click', async () => {
     if (activeEpoch !== epoch) return;
     running = true; busy = false; render(first); controls();
     pointerMotion = first.pointerMotion === true;
+    physicalKeyboardSupported = first.physicalKeyboardSupported === true;
     if(first.fileSupported)savedFiles.start(first.fileDirectory);
     $('#session').textContent = gameFile.name;
     canvas.focus();
@@ -188,9 +191,13 @@ for (const [input, label] of [[binary, '#binary-name'], [data, '#data-name']]) {
 }
 
 function send(kind, a = 0, b = 0) {
+  queueInput({kind,a,b});
+}
+
+function queueInput(event) {
   if (!running) return;
   if (inputQueue.length >= 256) { fail(new Error('Too much queued input. Restart the game and enter text in smaller pieces.'), epoch); return; }
-  inputQueue.push({kind, a, b});
+  inputQueue.push(event);
   if (!inputBusy) drainInput();
 }
 
@@ -226,10 +233,8 @@ canvas.addEventListener('pointerup', event => {
   lastPointer = point; send(event.button === 2 ? 6 : 5, point.x, point.y); canvas.focus();
 });
 canvas.addEventListener('keydown', event => {
-  if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
-  const kind = {Enter: 2, Backspace: 3, Escape: 4, ArrowLeft: 8, ArrowRight: 9}[event.key];
-  if (kind) { event.preventDefault(); send(kind); }
-  else if ([...event.key].length === 1) { event.preventDefault(); send(1, event.key.codePointAt(0)); }
+  const fallback=logicalKey(event);
+  if(fallback){event.preventDefault();queueInput(fallback);}
 });
 keyboard.addEventListener('beforeinput', event => {
   if (event.inputType === 'deleteContentBackward') { event.preventDefault(); send(3); }

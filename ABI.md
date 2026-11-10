@@ -101,13 +101,18 @@ can combine it with `game_tick` for raster-paced scrolling or animation.
 ## Optional physical keyboard
 
 Export `game_keyboard_mode() -> u32`, returning 1 when physical keyboard events
-are wanted. Every snapshot refreshes this mode. While enabled, mapped keys use
+are wanted. The worker reads this mode immediately before routing each queued
+key, after earlier inputs and file replies; the page's last frame can be stale.
+While enabled, mapped keys use
 `game_input(12, usage, pressed)`, with a USB HID keyboard-page usage ID and
 `pressed` equal to 1 for key-down or 0 for key-up. Other input kinds remain
 available for mobile text, buttons and pointer input. The host suppresses
 autorepeat in physical mode and pairs releases only with captured presses.
 Losing focus releases captured keys. A game should ignore physical keys it
 does not implement. Games without the export retain the original behavior.
+Keys pressed in logical mode retain text autorepeat while that mode remains
+active. A held logical key cannot become a fresh physical press on a mode
+change; a held raw key cannot type into a new text field before its release.
 
 ## Optional stereo audio
 

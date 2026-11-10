@@ -5,6 +5,53 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {GameRuntime} from '../runtime.js';
 import {fixture} from './fixture.mjs';
+import {logicalKey,physicalKeyboard} from '../physical-key.js';
+
+test('queued keys use current worker mode across menu and text transitions',async()=>{
+  const game=new GameRuntime();await game.load(fixture(),null);
+  let mode=1;const calls=[];
+  game.api={...game.api,game_keyboard_mode:()=>mode,game_input:(kind,a,b)=>{
+    calls.push([kind,a,b]);
+    if(kind===12&&a===24&&b===0)mode=0; // U release opens text input.
+    if(kind===2)mode=1; // Return closes it.
+    return 1;
+  }};
+  const key=(usage,pressed,fallback=null)=>({keyboard:true,usage,pressed,fallback});
+  game.inputs([
+    key(24,true,{kind:1,a:117,b:0}),key(24,false),
+    key(11,true,{kind:1,a:72,b:0}),key(11,false),
+    key(4,true,{kind:1,a:65,b:0}),key(4,true,{kind:1,a:65,b:0}),key(4,false),
+    key(40,true,{kind:2,a:0,b:0}),key(40,false),
+    key(59,true),key(59,true),key(59,false),
+  ]);
+  assert.deepEqual(calls,[[12,24,1],[12,24,0],[1,72,0],[1,65,0],[1,65,0],[2,0,0],[12,59,1],[12,59,0]]);
+  // A held raw key released after a tick changes mode must still get its up.
+  game.inputs([key(22,true)]);mode=0;
+  game.inputs([key(22,true,{kind:1,a:115,b:0}),key(22,false)]);
+  assert.deepEqual(calls.slice(-2),[[12,22,1],[12,22,0]]);
+  // Held logical input cannot become a new physical press through autorepeat.
+  game.inputs([key(5,true,{kind:1,a:98,b:0})]);mode=1;
+  game.inputs([key(5,true,{kind:1,a:98,b:0}),key(5,false)]);
+  assert.deepEqual(calls.at(-1),[1,98,0]);
+  await game.load(fixture(),null);
+  assert.equal(game.keyboardDown.size,0);
+  game.inputs([key(11,true,{kind:1,a:72,b:0}),key(11,false)]);
+  assert.deepEqual([...game.snapshot().frame].slice(0,2),[1,72]);
+});
+
+test('keyboard capture retains fallback characters, repeats and blur releases',()=>{
+  const callbacks=new Map(),sent=[];
+  const element={addEventListener:(name,callback)=>callbacks.set(name,callback)};
+  const reset=physicalKeyboard(element,{enabled:()=>true,repeats:true,send:(usage,pressed,event)=>sent.push([usage,pressed,logicalKey(event)])});
+  const event={code:'KeyA',key:'Ä',preventDefault(){},stopImmediatePropagation(){}};
+  callbacks.get('keydown')(event);callbacks.get('keydown')({...event,repeat:true});
+  callbacks.get('blur')();callbacks.get('keyup')(event);
+  assert.deepEqual(sent,[[4,true,{kind:1,a:196,b:0}],[4,true,{kind:1,a:196,b:0}],[4,false,null]]);
+  for(const option of ['ctrlKey','altKey','metaKey','isComposing'])assert.equal(logicalKey({...event,[option]:true}),null);
+  assert.deepEqual(logicalKey({...event,key:'😀'}),{kind:1,a:0x1f600,b:0});
+  callbacks.get('keydown')(event);reset();callbacks.get('keyup')(event);
+  assert.equal(sent.length,4);
+});
 
 test('runs a generic module with local data and copies RGBA output',async()=>{
   const game=new GameRuntime();
