@@ -156,7 +156,7 @@ files are never sent over the network. Namespace is an opaque stable game ID
 | Export | Arguments | Result |
 | --- | --- | --- |
 | `game_file_namespace_ptr` / `game_file_namespace_len` | — | UTF-8 game ID |
-| `game_file_kind` | — | 0 none, 1 list directory, 2 read, 3 write, 4 root metadata |
+| `game_file_kind` | — | 0 none, 1 list directory, 2 read, 3 write, 4 directory metadata |
 | `game_file_path_ptr` / `game_file_path_len` | — | Pending request path |
 | `game_file_data_ptr` / `game_file_data_len` | — | Write bytes; ignored for list/read |
 | `game_file_limit` | — | Maximum read byte count; ignored otherwise |
@@ -188,8 +188,10 @@ and 16 MiB per file/reply bound host work. Modules without these exports keep
 working; partial extensions are rejected with a readable error.
 
 
-Request kind 4 queries the local namespace's writability without changing files.
-Its path must be empty (the sole exception to the relative-path rule). On success,
+Request kind 4 queries a mounted local directory/volume without changing files.
+A normal relative path selects that directory; an empty path selects the namespace
+root (the sole exception to the relative-path rule). Browser directories are
+virtual prefixes within the namespace. On success,
 `opened=1` and the reply contains one flags byte: bit 0 is 1 for read-only storage,
 0 for writable storage; other bits are reserved. Unavailable/unmounted storage
 replies `opened=0` with no bytes. A mounted namespace whose metadata is uncertain
@@ -200,3 +202,11 @@ any particular subsequent write will succeed. IndexedDB readwrite-transaction
 support is probed without storing a record. A zero-limit kind 2 read is an Open
 probe: existence is returned normally, and expected missing files do not create
 a host warning. All other failures retain their normal diagnostic behavior.
+
+A metadata reply may append a two-byte unsigned big-endian label length and that
+many UTF-8 bytes after its flags byte. The extension is optional; old one-byte
+replies remain valid. Labels describe the mounted directory, independently of
+any game. Browser labels use the last relative-path component (empty at the
+namespace root); native adapters may report the mounted directory's label.
+The default file directory exports may change after a file reply; the host
+refreshes them when the request chain becomes idle, including during startup.

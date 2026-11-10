@@ -34,15 +34,18 @@ export class BrowserFileStore {
       try {action(tx.objectStore('files'),value=>{result=value;});} catch(error){tx.abort();reject(error);}
     });
   }
-  async metadata() {
+  async metadata(path='') {
+    const label=path?relativePath(path).split('/').at(-1):'';
+    const encoded=encoder.encode(label);
+    const reply=readonly=>{const bytes=new Uint8Array(encoded.length+3);bytes[0]=Number(readonly);new DataView(bytes.buffer).setUint16(1,encoded.length);bytes.set(encoded,3);return bytes;};
     // Read access corresponds to a mounted namespace. A readwrite transaction
     // probes capability without changing any files or consuming storage quota.
     await this.transaction('readonly',()=>{});
-    try {await this.transaction('readwrite',()=>{});return new Uint8Array([0]);}
+    try {await this.transaction('readwrite',()=>{});return reply(false);}
     catch(error) {
       // A failed capability query need not mean read-only storage. Preserve
       // the caller's last known state when the mounted namespace is uncertain.
-      return error?.name==='ReadOnlyError'?new Uint8Array([1]):new Uint8Array();
+      return error?.name==='ReadOnlyError'?reply(true):new Uint8Array();
     }
   }
   async list(namespace) {
@@ -77,11 +80,15 @@ export class LocalFiles {
     if(present!==FUNCTIONS.length)throw new Error('The game has an incomplete local file interface.');
     this.namespace=this.text(api.game_file_namespace_ptr(),api.game_file_namespace_len());
     if(!this.namespace||this.namespace.length>128)throw new Error('Invalid local file namespace.');
+    this.refreshDirectory();
+    return true;
+  }
+  refreshDirectory() {
+    const api=this.api;
     if(typeof api.game_file_default_dir_ptr==='function'&&typeof api.game_file_default_dir_len==='function'){
       this.defaultDirectory=this.text(api.game_file_default_dir_ptr(),api.game_file_default_dir_len());
       if(this.defaultDirectory)relativePath(this.defaultDirectory);
     }
-    return true;
   }
   range(pointer,length) {
     const at=pointer>>>0;
@@ -96,15 +103,14 @@ export class LocalFiles {
     if(!this.namespace)return;
     const api=this.api,generation=this.generation,namespace=this.namespace;
     for(let requests=0;requests<16;requests++){
-      const kind=api.game_file_kind();if(kind===0)return;
+      const kind=api.game_file_kind();if(kind===0){this.refreshDirectory();return;}
       const rawPath=this.text(api.game_file_path_ptr(),api.game_file_path_len());
       const path=kind===4&&rawPath===''?'':relativePath(rawPath);
       const probe=kind===2&&api.game_file_limit()===0;
       let bytes=new Uint8Array(),opened=1;
       try {
         if(kind===4){
-          if(path!=='')throw new Error('Volume metadata requires an empty root path.');
-          bytes=await this.store.metadata();
+          bytes=await this.store.metadata(path);
         }else if(kind===1){
           const prefix=key(path)+'/';const chunks=[];let total=0;
           for(const name of await this.store.list(namespace)){

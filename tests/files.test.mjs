@@ -65,9 +65,27 @@ test('root metadata is generic, read-only state is preserved and failed open pro
 test('metadata distinguishes a read-only volume from an uncertain mounted-state query',async()=>{
   const store=new BrowserFileStore();
   store.transaction=async mode=>{if(mode==='readwrite')throw new DOMException('protected','ReadOnlyError');};
-  assert.deepEqual([...await store.metadata()],[1]);
+  assert.deepEqual([...await store.metadata()],[1,0,0]);
   store.transaction=async mode=>{if(mode==='readwrite')throw new DOMException('closed concurrently','InvalidStateError');};
   assert.deepEqual([...await store.metadata()],[]);
   store.transaction=async()=>{throw new DOMException('unmounted','InvalidStateError');};
   await assert.rejects(store.metadata(),{name:'InvalidStateError'});
+});
+
+test('directory metadata carries an optional UTF-8 mount label and keeps path boundaries',async()=>{
+  const store=new BrowserFileStore();store.transaction=async()=>{};
+  assert.deepEqual([...await store.metadata('df0')],[0,0,3,100,102,48]);
+  const files=new LocalFiles(store),a=api();files.attach(a);a.set(4,'df0');await files.pump();
+  assert.deepEqual([...a.replies.at(-1).bytes],[0,0,3,100,102,48]);
+  await assert.rejects(store.metadata('../escape'),/Invalid/);
+});
+
+test('a file reply can change the game default directory before the next snapshot',async()=>{
+  const store=new Store(),files=new LocalFiles(store),a=api();files.attach(a);
+  assert.equal(files.defaultDirectory,'Games');
+  const reply=a.game_file_reply.bind(a);a.game_file_reply=opened=>{
+    const result=reply(opened);new Uint8Array(a.memory.buffer,160,3).set(encoder.encode('df0'));
+    a.game_file_default_dir_len=()=>3;return result;
+  };
+  a.set(2,'s/startup-sequence',new Uint8Array(),0);await files.pump();assert.equal(files.defaultDirectory,'df0');
 });
