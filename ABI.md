@@ -221,6 +221,7 @@ files are never sent over the network. Namespace is an opaque stable game ID
 | `game_file_path_ptr` / `game_file_path_len` | — | Pending request path |
 | `game_file_data_ptr` / `game_file_data_len` | — | Write bytes; ignored for list/read |
 | `game_file_limit` | — | Maximum read byte count; ignored otherwise |
+| `game_file_optional` (optional) | — | `1` for an expected optional read; missing files return failure quietly |
 | `game_file_reply` | opened (0 or 1) | Consume reply and continue; success/failure |
 
 Optional `game_file_default_dir_ptr` / `game_file_default_dir_len` provide the

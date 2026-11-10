@@ -59,6 +59,9 @@ test('root metadata is generic, read-only state is preserved and failed open pro
   a.set(2,'s/startup-sequence',new Uint8Array(),0);await files.pump();
   assert.equal(a.replies.at(-1).opened,0);assert.equal(files.lastError,undefined);
   a.set(2,'missing',new Uint8Array(),4);await files.pump();assert.match(files.lastError.message,/missing/);
+  files.lastError=undefined;a.game_file_optional=()=>1;
+  a.set(2,'missing-history',new Uint8Array(),64);await files.pump();
+  assert.equal(a.replies.at(-1).opened,0);assert.equal(files.lastError,undefined);
   assert.throws(()=>relativePath('')); // The empty-path exception is metadata-only.
 });
 

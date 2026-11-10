@@ -107,6 +107,7 @@ export class LocalFiles {
       const rawPath=this.text(api.game_file_path_ptr(),api.game_file_path_len());
       const path=kind===4&&rawPath===''?'':relativePath(rawPath);
       const probe=kind===2&&api.game_file_limit()===0;
+      const optional=kind===2&&typeof api.game_file_optional==='function'&&api.game_file_optional()===1;
       let bytes=new Uint8Array(),opened=1;
       try {
         if(kind===4){
@@ -131,7 +132,7 @@ export class LocalFiles {
       } catch(error) {
         // Missing paths and failed opens are delivered to the original game.
         // Keep a diagnostic available to the host alongside its continuation.
-        opened=0;bytes=new Uint8Array();if(!probe&&generation===this.generation)this.lastError=error;
+        opened=0;bytes=new Uint8Array();if(!probe&&!optional&&generation===this.generation)this.lastError=error;
       }
       if(generation!==this.generation)return;
       const pointer=api.input_resize(bytes.length);
