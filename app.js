@@ -2,6 +2,7 @@
 import {physicalKeyboard,logicalKey} from './physical-key.js';
 import {AudioOutput} from './audio-output.js';
 import {filePanel} from './file-panel.js';
+import {gamePanel} from './game-ui.js';
 const $ = selector => document.querySelector(selector);
 const binary = $('#binary'), data = $('#data'), canvas = $('#screen');
 const context = canvas.getContext('2d', {alpha: false});
@@ -14,6 +15,8 @@ let pointerMotion = false;
 let physicalKeyboardSupported = false;
 let improvementsSupported = false;
 let audio;
+const renderPanel=gamePanel($('#game-ui'),{send:uiAction=>queueInput({uiAction})});
+let contextual=false;
 const resetPhysicalKeys=physicalKeyboard(canvas,{
   enabled:()=>running&&physicalKeyboardSupported,repeats:true,
   send:(usage,pressed,event)=>queueInput({keyboard:true,usage,pressed,fallback:pressed?logicalKey(event):null}),
@@ -74,6 +77,7 @@ function stop(text = 'Stopped. Start creates a fresh game.') {
   pending.clear();
   canvas.hidden = true; $('#placeholder').hidden = false;
   context.clearRect(0, 0, canvas.width, canvas.height);
+  renderPanel(null);contextual=false;document.body.classList.remove('ui-active','ui-replacement');$('#legacy-controls').open=true;
   keyboard.value = ''; lastPointer = {x: 0, y: 0};
   $('#session').textContent = 'Nothing running';
   message(text); controls();
@@ -99,6 +103,10 @@ function request(payload, transfer = [], timeout = 3000) {
 }
 
 function render(snapshot) {
+  renderPanel(snapshot.ui);
+  if(contextual!==!!snapshot.ui){contextual=!!snapshot.ui;$('#legacy-controls').open=!(snapshot.improvedMode||contextual);}
+  document.body.classList.toggle('ui-active',!!snapshot.ui);
+  document.body.classList.toggle('ui-replacement',snapshot.ui?.replaceScreen===true);
   improvementsSupported=snapshot.improvementsSupported===true;
   if(running){
     $('#improved-mode').checked=snapshot.improvedMode===true;
@@ -109,7 +117,7 @@ function render(snapshot) {
   }
   context.putImageData(new ImageData(new Uint8ClampedArray(snapshot.frame.buffer), snapshot.width, snapshot.height), 0, 0);
   canvas.hidden = false; $('#placeholder').hidden = true;
-  message(snapshot.status || 'Game running.');
+  message(snapshot.ui?(snapshot.ui.description||snapshot.ui.title):(snapshot.status||'Game running.'));
   if(snapshot.fileWarning)message(snapshot.fileWarning,true);
   if(snapshot.fileRevision!==undefined&&snapshot.fileRevision!==fileRevision){fileRevision=snapshot.fileRevision;savedFiles.refresh();}
 }

@@ -17,6 +17,13 @@ the host runtime. It works under GitHub Pages subpaths.
 3. Choose its data file if needed, then Start.
 4. Click the display to use the keyboard, or use the touch controls.
 
+Supporting games can supply contextual menus, forms and inventory cards through
+the optional controls extension. These appear as large touch buttons such as
+Confirm, Cancel, destinations and individual transactions; the game defines
+their labels and behavior. The older keyboard and right-click controls move
+into a collapsed **Other controls** section while contextual controls are active.
+Form drafts and inventory scroll positions survive ordinary game updates.
+
 For the private Der Patrizier reimplementation, run `make web` in that checkout,
 select `web/patrizier.wasm` (or a ZIP you package locally) and your original `patrizier.zip`. Its data parser,
 German interface and current gameplay limitations come from the selected module.
@@ -28,8 +35,8 @@ the software keyboard. Type text and Numbers open collapsible input controls;
 buttons are at least 44 pixels high and text entry uses a 16-pixel font to avoid
 iPhone input zoom. Exit play view restores the file controls without restarting
 the game. Fullscreen includes the controls when supported; Play view works
-without that API. This runner layout cannot enlarge a game's own menu hitboxes;
-games still need touch-friendly interfaces for small in-game targets.
+without that API. Games without contextual controls retain their original
+display hitboxes and the runner's keyboard and pointer controls.
 
 The optional Improved mode checkbox can be chosen before Start and changed
 while playing. Supporting modules expose the getter/setter pair in `ABI.md`;

@@ -1,6 +1,7 @@
 // Authors: Christian Reitwiessner
 // This module is also used by the Node protocol tests. It has no browser I/O.
 import {unpackGame} from './game-file.js';
+import {validatePanel} from './game-ui.js';
 const FUNCTIONS = ['game_abi_version', 'input_resize', 'game_load', 'game_start',
   'game_input', 'game_frame_width', 'game_frame_height', 'game_frame_ptr',
   'game_status_ptr', 'game_status_len', 'error_ptr', 'error_len'];
@@ -24,6 +25,8 @@ export class GameRuntime {
     if (!(api.memory instanceof WebAssembly.Memory)) throw new Error('Incompatible game: missing exported memory.');
     if (api.game_abi_version() !== 1) throw new Error('Unsupported game interface version. This host supports Local Game ABI v1.');
     this.api = api;
+    const uiExports=['game_ui_version','game_ui_ptr','game_ui_len','game_ui_action'];
+    if(uiExports.some(name=>typeof api[name]==='function')&&(!uiExports.every(name=>typeof api[name]==='function')||api.game_ui_version()!==1))throw new Error('The game has an incompatible controls interface.');
     // A missing data file means no game_load call. Some games need no data.
     if (data !== null) {
       const bytes = new Uint8Array(data);
@@ -80,7 +83,12 @@ export class GameRuntime {
     const physicalKeyboardSupported=typeof api.game_keyboard_mode==='function';
     const improvementsSupported=this.improvementsSupported;
     const improvedMode=improvementsSupported&&api.game_improved_mode()===1;
-    return {width, height, frame, status, physicalKeyboard,physicalKeyboardSupported,improvementsSupported,improvedMode};
+    let ui=null;
+    if(typeof api.game_ui_len==='function'&&api.game_ui_len()){
+      try{ui=validatePanel(JSON.parse(this.text(api.game_ui_ptr(),api.game_ui_len())));}
+      catch(error){throw new Error(`Game controls could not be read: ${error.message}`);}
+    }
+    return {width, height, frame, status, physicalKeyboard,physicalKeyboardSupported,improvementsSupported,improvedMode,ui};
   }
 
   input(kind, a, b) {
@@ -91,6 +99,7 @@ export class GameRuntime {
     if (!this.api) throw new Error('No game is running.');
     if (!Array.isArray(events) || events.length > 32) throw new Error('Invalid input batch.');
     for (const event of events) {
+      if(event.uiAction){this.uiAction(event.uiAction);continue;}
       if(typeof event.improvedMode==='boolean'){this.setImprovedMode(event.improvedMode);continue;}
       if(event.keyboard){this.keyboardInput(event);continue;}
       const {kind,a,b}=event;
@@ -125,6 +134,17 @@ export class GameRuntime {
   }
 
   get animated() { return typeof this.api?.game_tick === 'function'; }
+  uiAction({id,revision,value=''}) {
+    if(typeof this.api?.game_ui_action!=='function')throw new Error('This game does not supply contextual controls.');
+    if(!Number.isInteger(id)||id<0||id>0xffffffff||!Number.isInteger(revision)||revision<0||revision>0xffffffff||typeof value!=='string')throw new Error('Invalid game action.');
+    const bytes=new TextEncoder().encode(value);
+    if(bytes.length>1024)throw new Error('Game input is too long.');
+    const pointer=this.api.input_resize(bytes.length);
+    if(!pointer&&bytes.length)throw new Error('Could not allocate game input.');
+    this.range(pointer,bytes.length).set(bytes);
+    const result=this.api.game_ui_action(id,revision);
+    if(result!==2)this.check(result,'Game action failed.');
+  }
   get improvementsSupported() { return ['game_improved_mode','game_set_improved_mode'].every(name=>typeof this.api?.[name]==='function'); }
   setImprovedMode(enabled) {
     if(typeof enabled!=='boolean')throw new Error('Choose Original or Improved mode.');

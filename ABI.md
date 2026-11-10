@@ -129,6 +129,47 @@ Switching should affect future actions without replaying past ones or changing
 simulation state merely because the setting changed. The module decides how
 this setting and any additional improvement metadata persist across saves.
 
+## Optional contextual controls
+
+Export the complete group `game_ui_version() -> 1`, `game_ui_ptr() -> pointer`,
+`game_ui_len() -> byte length` and `game_ui_action(id, revision) -> result`.
+The pointer/length identify UTF-8 JSON (maximum 64 KiB); zero length means no
+panel. Getters follow the ordinary pure-getter lifetime rules. This extension
+works independently of the optional improvements-mode switch.
+
+```json
+{
+  "revision": 1,
+  "title": "Choose amount",
+  "description": "Available: 12",
+  "notice": "",
+  "replaceScreen": false,
+  "field": {"key": "purchase", "label": "Amount", "value": "1", "number": true, "maximum": 12},
+  "actions": [{"id": 0, "label": "Confirm", "enabled": true, "usesField": true, "active": false}],
+  "rows": []
+}
+```
+
+`field` may be null. A text field uses `number: false` and `maximum` as its
+maximum character count (up to 1024); a numeric field uses an unsigned upper
+bound and minimum zero. `key` identifies the logical form so updates can retain
+an unsent draft. Rows contain `title`, `detail` and `actions` with the same
+action shape. IDs and revisions are unsigned 32-bit integers; IDs are unique
+within a panel. `active` marks a selected action. All content is plain text.
+The host accepts at most 128 rows and 512 actions; titles, labels and field
+keys are limited to 256 characters, descriptions/details/notices to 4096.
+
+The host writes a UTF-8 field value (maximum 1024 bytes) using `input_resize`,
+then calls `game_ui_action` with the displayed ID and revision. Actions with
+`usesField: false` receive an empty value. Return 1 for success, 2 for a stale
+or rejected action that leaves the game running, or 0 for a fatal error.
+Afterward the host refreshes the panel and services file requests normally.
+The module must reject disabled or outdated actions, change the revision when
+controls change, and retain it during unchanged animation updates. Notices can
+explain rejected field input. `replaceScreen` hides the framebuffer while the
+panel supplies the full presentation; otherwise both appear. Legacy controls
+remain available in a collapsible section.
+
 ## Optional stereo audio
 
 Export all four functions below to supply signed 16-bit, little-endian,

@@ -8,7 +8,7 @@ const vector=items=>[...leb(items.length),...items.flat()];
 const constant=value=>[0x41,...signed(value)];
 
 export function fixture(options={}) {
-  const {version=1,width=2,height=1,pointer=32,missing='',badStart=false,hang=false,grow=false,tick=false,motion=false,physical=false,improvements=false,imports=false,audio=false,audioPointer=640,audioLength=null,audioGrow=false,badAudio=false}=options;
+  const {version=1,width=2,height=1,pointer=32,missing='',badStart=false,hang=false,grow=false,tick=false,motion=false,physical=false,improvements=false,ui=false,uiVersion=1,imports=false,audio=false,audioPointer=640,audioLength=null,audioGrow=false,badAudio=false}=options;
   const types=[[0x60,0,1,0x7f],[0x60,1,0x7f,1,0x7f],[0x60,3,0x7f,0x7f,0x7f,1,0x7f],[0x60,2,0x7f,0x7f,1,0x7f]];
   const definitions=[
     ['game_abi_version',0,constant(version)],['input_resize',1,constant(4096)],
@@ -20,6 +20,10 @@ export function fixture(options={}) {
     ['error_ptr',0,constant(256)],['error_len',0,constant(12)],
     ...(tick?[['game_tick',1,constant(1)]]:[]),
     ...(physical?[['game_keyboard_mode',0,constant(1)]]:[]),
+    ...(ui?[
+      ['game_ui_version',0,constant(uiVersion)],['game_ui_ptr',0,constant(8192)],
+      ['game_ui_len',0,constant(0)],['game_ui_action',3,constant(1)],
+    ]:[]),
     ...(improvements?[
       ['game_improved_mode',0,[...constant(520),0x28,2,0]],
       ['game_set_improved_mode',1,[...constant(520),0x20,0,0x36,2,0,...constant(1)]],

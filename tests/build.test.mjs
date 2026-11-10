@@ -11,7 +11,7 @@ test('versions the full script/worker/style graph so cached old assets cannot mi
   try {
     const {version, assets} = await build(path.join(directory, 'site'));
     const names = await readdir(path.join(directory, 'site'));
-    assert.equal(assets.length, 10);
+    assert.equal(assets.length, 12);
     for (const name of assets) assert.ok(names.includes(name));
     assert.ok(!names.includes('app.js')); assert.ok(!names.includes('worker.js'));
     for (const name of ['index.html', ...assets]) {
