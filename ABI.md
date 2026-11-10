@@ -245,7 +245,7 @@ data already loaded by `game_load`.
 
 The host handles requests after start and each input/update, including between inputs in
 a batch. Worker operations are serialized so async file completions cannot
-race a new input or audio request. A maximum of sixteen consecutive requests
+race a new input or audio request. A maximum of 1,024 consecutive requests
 and 16 MiB per file/reply bound host work. Modules without these exports keep
 working; partial extensions are rejected with a readable error.
 

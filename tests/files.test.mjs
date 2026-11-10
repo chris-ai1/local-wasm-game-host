@@ -3,6 +3,16 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {BrowserFileStore,LocalFiles,relativePath} from '../file-storage.js';
 const encoder=new TextEncoder();
+test('long finite resource chains complete while endless request chains remain bounded',async()=>{
+  for(const count of [300,1024,1025]){
+    const a=api(),files=new LocalFiles({metadata:async()=>new Uint8Array([0])});files.attach(a);
+    a.input_resize=n=>{a.replyLength=n;return 8192;};
+    const reply=a.game_file_reply.bind(a);let left=count;
+    a.game_file_reply=opened=>{reply(opened);if(--left)a.set(4,'PA1');return 1;};a.set(4,'PA1');
+    if(count<=1024){await files.pump();assert.equal(left,0);}
+    else{await assert.rejects(files.pump(),/Too many consecutive/);assert.equal(left,1);}
+  }
+});
 class Store {
   records=new Map();
   async list(namespace){return [...this.records].filter(([k])=>k.startsWith(namespace+':')).map(([,r])=>r.path);}

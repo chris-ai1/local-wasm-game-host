@@ -102,7 +102,8 @@ export class LocalFiles {
   async pump() {
     if(!this.namespace)return;
     const api=this.api,generation=this.generation,namespace=this.namespace;
-    for(let requests=0;requests<16;requests++){
+    // A game's prefetch can legitimately probe several volumes for each file.
+    for(let requests=0;requests<1024;requests++){
       const kind=api.game_file_kind();if(kind===0){this.refreshDirectory();return;}
       const rawPath=this.text(api.game_file_path_ptr(),api.game_file_path_len());
       const path=kind===4&&rawPath===''?'':relativePath(rawPath);
@@ -142,6 +143,8 @@ export class LocalFiles {
         const error=this.text(api.error_ptr(),api.error_len());throw new Error(error||'Game local file reply failed.');
       }
     }
+    if(generation!==this.generation)return;
+    if(api.game_file_kind()===0){this.refreshDirectory();return;}
     throw new Error('Too many consecutive local file requests.');
   }
   async list(){return this.namespace?this.store.list(this.namespace):[];}
