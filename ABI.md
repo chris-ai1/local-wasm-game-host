@@ -156,7 +156,7 @@ files are never sent over the network. Namespace is an opaque stable game ID
 | Export | Arguments | Result |
 | --- | --- | --- |
 | `game_file_namespace_ptr` / `game_file_namespace_len` | — | UTF-8 game ID |
-| `game_file_kind` | — | 0 none, 1 list directory, 2 read, 3 write |
+| `game_file_kind` | — | 0 none, 1 list directory, 2 read, 3 write, 4 root metadata |
 | `game_file_path_ptr` / `game_file_path_len` | — | Pending request path |
 | `game_file_data_ptr` / `game_file_data_len` | — | Write bytes; ignored for list/read |
 | `game_file_limit` | — | Maximum read byte count; ignored otherwise |
@@ -181,8 +181,22 @@ A read may also report partial delivered bytes; games decide their own error
 and continuation behavior. The reply buffer is independent of the original
 data already loaded by `game_load`.
 
-The host handles requests after each input/update, including between inputs in
+The host handles requests after start and each input/update, including between inputs in
 a batch. Worker operations are serialized so async file completions cannot
 race a new input or audio request. A maximum of sixteen consecutive requests
 and 16 MiB per file/reply bound host work. Modules without these exports keep
 working; partial extensions are rejected with a readable error.
+
+
+Request kind 4 queries the local namespace's writability without changing files.
+Its path must be empty (the sole exception to the relative-path rule). On success,
+`opened=1` and the reply contains one flags byte: bit 0 is 1 for read-only storage,
+0 for writable storage; other bits are reserved. Unavailable/unmounted storage
+replies `opened=0` with no bytes. A mounted namespace whose metadata is uncertain
+replies `opened=1` with no bytes, allowing the game to retain its previous state.
+Only a known read-only failure sets bit0; unrelated query failures do not.
+This reports capabilities, not a promise that
+any particular subsequent write will succeed. IndexedDB readwrite-transaction
+support is probed without storing a record. A zero-limit kind 2 read is an Open
+probe: existence is returned normally, and expected missing files do not create
+a host warning. All other failures retain their normal diagnostic behavior.

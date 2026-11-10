@@ -1,4 +1,5 @@
 // Authors: Christian Reitwiessner
+import {originalMenu} from './real-game.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -56,6 +57,6 @@ test('optional real game build accepts local data through the generic ABI',{skip
   const game=new GameRuntime();const binary=await readFile(process.env.GAME_WASM);
   const data=process.env.GAME_DATA?new Uint8Array(await readFile(process.env.GAME_DATA)).buffer:null;
   const first=await game.load(binary,data);
-  assert.equal(first.width,320);assert.equal(first.height,200);assert.match(first.status,/Hauptmenü/);
+  assert.equal(first.width,320);assert.equal(first.height,200);originalMenu(game);
   assert.match(game.input(1,117,0).status,/Vorname/);
 });

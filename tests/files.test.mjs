@@ -1,7 +1,7 @@
 // Authors: Christian Reitwiessner
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {LocalFiles,relativePath} from '../file-storage.js';
+import {BrowserFileStore,LocalFiles,relativePath} from '../file-storage.js';
 const encoder=new TextEncoder();
 class Store {
   records=new Map();
@@ -45,4 +45,29 @@ test('old modules remain compatible and paths cannot escape local storage roots'
   assert.throws(()=>new LocalFiles().attach({game_file_kind(){}}),/incomplete/);
   for(const path of ['../a','/a','a/../b','a//b','a\\b','df0:a','a\0b'])assert.throws(()=>relativePath(path));
   assert.equal(relativePath('Games/ALT SAVE.GAME'),'Games/ALT SAVE.GAME');
+});
+
+test('root metadata is generic, read-only state is preserved and failed open probes are quiet',async()=>{
+  const store=new Store(),files=new LocalFiles(store),a=api();files.attach(a);
+  for(const value of [0,1]){
+    store.metadata=async()=>new Uint8Array([value]);a.set(4,'');await files.pump();
+    assert.deepEqual(a.replies.at(-1),{opened:1,bytes:new Uint8Array([value])});
+  }
+  store.metadata=async()=>{throw Error('unmounted');};a.set(4,'');await files.pump();
+  assert.equal(a.replies.at(-1).opened,0);assert.match(files.lastError.message,/unmounted/);
+  files.lastError=undefined;
+  a.set(2,'s/startup-sequence',new Uint8Array(),0);await files.pump();
+  assert.equal(a.replies.at(-1).opened,0);assert.equal(files.lastError,undefined);
+  a.set(2,'missing',new Uint8Array(),4);await files.pump();assert.match(files.lastError.message,/missing/);
+  assert.throws(()=>relativePath('')); // The empty-path exception is metadata-only.
+});
+
+test('metadata distinguishes a read-only volume from an uncertain mounted-state query',async()=>{
+  const store=new BrowserFileStore();
+  store.transaction=async mode=>{if(mode==='readwrite')throw new DOMException('protected','ReadOnlyError');};
+  assert.deepEqual([...await store.metadata()],[1]);
+  store.transaction=async mode=>{if(mode==='readwrite')throw new DOMException('closed concurrently','InvalidStateError');};
+  assert.deepEqual([...await store.metadata()],[]);
+  store.transaction=async()=>{throw new DOMException('unmounted','InvalidStateError');};
+  await assert.rejects(store.metadata(),{name:'InvalidStateError'});
 });

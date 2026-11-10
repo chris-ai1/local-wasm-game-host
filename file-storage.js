@@ -34,6 +34,17 @@ export class BrowserFileStore {
       try {action(tx.objectStore('files'),value=>{result=value;});} catch(error){tx.abort();reject(error);}
     });
   }
+  async metadata() {
+    // Read access corresponds to a mounted namespace. A readwrite transaction
+    // probes capability without changing any files or consuming storage quota.
+    await this.transaction('readonly',()=>{});
+    try {await this.transaction('readwrite',()=>{});return new Uint8Array([0]);}
+    catch(error) {
+      // A failed capability query need not mean read-only storage. Preserve
+      // the caller's last known state when the mounted namespace is uncertain.
+      return error?.name==='ReadOnlyError'?new Uint8Array([1]):new Uint8Array();
+    }
+  }
   async list(namespace) {
     const records=await this.transaction('readonly',(store,done)=>{
       const request=store.getAll();request.onsuccess=()=>done(request.result.filter(r=>r.namespace===namespace));
@@ -86,10 +97,15 @@ export class LocalFiles {
     const api=this.api,generation=this.generation,namespace=this.namespace;
     for(let requests=0;requests<16;requests++){
       const kind=api.game_file_kind();if(kind===0)return;
-      const path=relativePath(this.text(api.game_file_path_ptr(),api.game_file_path_len()));
+      const rawPath=this.text(api.game_file_path_ptr(),api.game_file_path_len());
+      const path=kind===4&&rawPath===''?'':relativePath(rawPath);
+      const probe=kind===2&&api.game_file_limit()===0;
       let bytes=new Uint8Array(),opened=1;
       try {
-        if(kind===1){
+        if(kind===4){
+          if(path!=='')throw new Error('Volume metadata requires an empty root path.');
+          bytes=await this.store.metadata();
+        }else if(kind===1){
           const prefix=key(path)+'/';const chunks=[];let total=0;
           for(const name of await this.store.list(namespace)){
             if(!key(name).startsWith(prefix))continue;
@@ -109,7 +125,7 @@ export class LocalFiles {
       } catch(error) {
         // Missing paths and failed opens are delivered to the original game.
         // Keep a diagnostic available to the host alongside its continuation.
-        opened=0;bytes=new Uint8Array();if(generation===this.generation)this.lastError=error;
+        opened=0;bytes=new Uint8Array();if(!probe&&generation===this.generation)this.lastError=error;
       }
       if(generation!==this.generation)return;
       const pointer=api.input_resize(bytes.length);

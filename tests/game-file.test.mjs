@@ -1,4 +1,5 @@
 // Authors: Christian Reitwiessner
+import {originalMenu} from './real-game.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -35,5 +36,5 @@ test('rejects corrupt, truncated, split and oversized game ZIPs',async()=>{
 test('opens the locally packaged real game build',{skip:!process.env.GAME_WASM_ZIP},async()=>{
   const bytes=await readFile(process.env.GAME_WASM_ZIP),game=new GameRuntime();
   const data=process.env.GAME_DATA?new Uint8Array(await readFile(process.env.GAME_DATA)).buffer:null;
-  const first=await game.load(bytes,data);assert.match(first.status,/Hauptmenü/);
+  await game.load(bytes,data);originalMenu(game);
 });
